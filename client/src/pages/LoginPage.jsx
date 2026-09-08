@@ -1,11 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, quickDemoLogin } = useAuth();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,19 +30,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleQuickDemo() {
-    try {
-      setLoading(true);
-      setError('');
-      await quickDemoLogin();
-      navigate('/');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-app relative overflow-hidden transition-colors duration-200">
       {/* Background subtle color accents */}
@@ -57,23 +44,6 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-black text-theme-main tracking-tight">Chào mừng đến AntiEnglish</h1>
           <p className="text-sm text-theme-subtle mt-1 font-medium">Ứng dụng học từ vựng tiếng Anh thông minh & hiệu quả</p>
-        </div>
-
-        {/* Demo button */}
-        <button
-          type="button"
-          onClick={handleQuickDemo}
-          disabled={loading}
-          className="w-full mb-6 py-3 px-4 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 font-bold text-sm flex items-center justify-center space-x-2 transition-all cursor-pointer shadow-xs"
-        >
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>Đăng nhập nhanh 1-Click (Tài khoản mẫu)</span>
-        </button>
-
-        <div className="relative flex items-center justify-center mb-6">
-          <div className="border-t border-theme-subtle w-full" />
-          <span className="bg-surface px-3 text-xs text-theme-subtle font-bold uppercase tracking-wider">hoặc</span>
-          <div className="border-t border-theme-subtle w-full" />
         </div>
 
         {/* Form */}

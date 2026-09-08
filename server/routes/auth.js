@@ -1,11 +1,10 @@
-﻿const express = require('express');
+const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Folder = require('../models/Folder');
 const Card = require('../models/Card');
 const PracticeHistory = require('../models/PracticeHistory');
-const { seedDefaultData } = require('../config/db');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
@@ -51,9 +50,6 @@ router.post('/register', async (req, res) => {
       password_hash,
       full_name: full_name ? full_name.trim() : username.trim()
     });
-
-    // Seed sample vocabulary sets for the new user so they can start immediately!
-    await seedDefaultData(newUser._id);
 
     const userData = {
       id: newUser._id.toString(),
