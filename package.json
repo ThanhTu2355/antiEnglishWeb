@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server/index.js",
-    "build": "npm --prefix client install && npm --prefix client run build",
-    "postinstall": "npm --prefix client install",
+    "build": "npm --prefix client ci && npm --prefix client run build",
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,green\" \"node server/index.js\" \"npm --prefix client run dev\"",
