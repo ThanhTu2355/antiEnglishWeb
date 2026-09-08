@@ -1,29 +1,49 @@
-const express = require('express');
-const { db } = require('../db');
+﻿const express = require('express');
+const mongoose = require('mongoose');
+const Folder = require('../models/Folder');
+const Card = require('../models/Card');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // Get all folders for the authenticated user
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const folders = db.prepare(`
-      SELECT 
-        f.*,
-        COUNT(c.id) as card_count,
-        SUM(CASE WHEN c.status = 'mastered' THEN 1 ELSE 0 END) as mastered_count,
-        SUM(CASE WHEN c.status != 'mastered' THEN 1 ELSE 0 END) as unmastered_count,
-        SUM(CASE WHEN c.status = 'learning' THEN 1 ELSE 0 END) as learning_count
-      FROM folders f
-      LEFT JOIN cards c ON f.id = c.folder_id
-      WHERE f.user_id = ?
-      GROUP BY f.id
-      ORDER BY f.updated_at DESC, f.id DESC
-    `).all(userId);
+    const folders = await Folder.find({ user_id: userId }).sort({ updated_at: -1, _id: -1 });
 
-    res.json(folders);
+    const folderIds = folders.map(f => f._id);
+    const cardAgg = await Card.aggregate([
+      { $match: { folder_id: { $in: folderIds } } },
+      {
+        $group: {
+          _id: '$folder_id',
+          card_count: { $sum: 1 },
+          mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+          unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
+          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const statsMap = {};
+    cardAgg.forEach(item => {
+      statsMap[item._id.toString()] = item;
+    });
+
+    const result = folders.map(f => {
+      const s = statsMap[f._id.toString()] || {};
+      return {
+        ...f.toJSON(),
+        card_count: s.card_count || 0,
+        mastered_count: s.mastered_count || 0,
+        unmastered_count: s.unmastered_count || 0,
+        learning_count: s.learning_count || 0
+      };
+    });
+
+    res.json(result);
   } catch (err) {
     console.error('Get folders error:', err);
     res.status(500).json({ error: 'Không thể lấy danh sách thư mục' });
@@ -31,29 +51,41 @@ router.get('/', (req, res) => {
 });
 
 // Get single folder
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const folderId = req.params.id;
     const userId = req.user.id;
 
-    const folder = db.prepare(`
-      SELECT 
-        f.*,
-        COUNT(c.id) as card_count,
-        SUM(CASE WHEN c.status = 'mastered' THEN 1 ELSE 0 END) as mastered_count,
-        SUM(CASE WHEN c.status != 'mastered' THEN 1 ELSE 0 END) as unmastered_count,
-        SUM(CASE WHEN c.status = 'learning' THEN 1 ELSE 0 END) as learning_count
-      FROM folders f
-      LEFT JOIN cards c ON f.id = c.folder_id
-      WHERE f.id = ? AND f.user_id = ?
-      GROUP BY f.id
-    `).get(folderId, userId);
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      return res.status(404).json({ error: 'ID thư mục không hợp lệ' });
+    }
 
+    const folder = await Folder.findOne({ _id: folderId, user_id: userId });
     if (!folder) {
       return res.status(404).json({ error: 'Không tìm thấy thư mục' });
     }
 
-    res.json(folder);
+    const cardAgg = await Card.aggregate([
+      { $match: { folder_id: folder._id } },
+      {
+        $group: {
+          _id: '$folder_id',
+          card_count: { $sum: 1 },
+          mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+          unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
+          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const s = cardAgg[0] || {};
+    res.json({
+      ...folder.toJSON(),
+      card_count: s.card_count || 0,
+      mastered_count: s.mastered_count || 0,
+      unmastered_count: s.unmastered_count || 0,
+      learning_count: s.learning_count || 0
+    });
   } catch (err) {
     console.error('Get folder detail error:', err);
     res.status(500).json({ error: 'Lỗi máy chủ' });
@@ -61,7 +93,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create folder
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, description = '', color = 'indigo', icon = 'folder' } = req.body;
@@ -70,15 +102,17 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Tên thư mục không được để trống' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO folders (user_id, name, description, color, icon)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, name.trim(), description.trim(), color, icon);
+    const newFolder = await Folder.create({
+      user_id: userId,
+      name: name.trim(),
+      description: description.trim(),
+      color,
+      icon
+    });
 
-    const newFolder = db.prepare('SELECT * FROM folders WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
       message: 'Tạo thư mục thành công!',
-      folder: { ...newFolder, card_count: 0, mastered_count: 0, learning_count: 0 }
+      folder: { ...newFolder.toJSON(), card_count: 0, mastered_count: 0, unmastered_count: 0, learning_count: 0 }
     });
   } catch (err) {
     console.error('Create folder error:', err);
@@ -87,28 +121,36 @@ router.post('/', (req, res) => {
 });
 
 // Update folder
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const folderId = req.params.id;
     const userId = req.user.id;
     const { name, description = '', color = 'indigo', icon = 'folder' } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      return res.status(404).json({ error: 'ID thư mục không hợp lệ' });
+    }
+
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Tên thư mục không được để trống' });
     }
 
-    const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?').get(folderId, userId);
-    if (!folder) {
+    const updated = await Folder.findOneAndUpdate(
+      { _id: folderId, user_id: userId },
+      {
+        name: name.trim(),
+        description: description.trim(),
+        color,
+        icon,
+        updated_at: new Date()
+      },
+      { new: true }
+    );
+
+    if (!updated) {
       return res.status(404).json({ error: 'Không tìm thấy thư mục cần sửa' });
     }
 
-    db.prepare(`
-      UPDATE folders
-      SET name = ?, description = ?, color = ?, icon = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND user_id = ?
-    `).run(name.trim(), description.trim(), color, icon, folderId, userId);
-
-    const updated = db.prepare('SELECT * FROM folders WHERE id = ?').get(folderId);
     res.json({
       message: 'Cập nhật thư mục thành công!',
       folder: updated
@@ -120,19 +162,22 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete folder
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const folderId = req.params.id;
     const userId = req.user.id;
 
-    const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?').get(folderId, userId);
+    if (!mongoose.Types.ObjectId.isValid(folderId)) {
+      return res.status(404).json({ error: 'ID thư mục không hợp lệ' });
+    }
+
+    const folder = await Folder.findOneAndDelete({ _id: folderId, user_id: userId });
     if (!folder) {
       return res.status(404).json({ error: 'Không tìm thấy thư mục cần xóa' });
     }
 
-    // Delete cards in this folder first (or CASCADE handles it)
-    db.prepare('DELETE FROM cards WHERE folder_id = ? AND user_id = ?').run(folderId, userId);
-    db.prepare('DELETE FROM folders WHERE id = ? AND user_id = ?').run(folderId, userId);
+    // Delete cards in this folder
+    await Card.deleteMany({ folder_id: folderId, user_id: userId });
 
     res.json({ message: 'Đã xóa thư mục thành công' });
   } catch (err) {
@@ -142,11 +187,11 @@ router.delete('/:id', (req, res) => {
 });
 
 // MERGE FOLDERS (Gộp thư mục)
-router.post('/merge', (req, res) => {
+router.post('/merge', async (req, res) => {
   try {
     const userId = req.user.id;
     let { 
-      source_folder_ids,       // Array of IDs, e.g. [1, 2]
+      source_folder_ids,       // Array of IDs
       target_folder_id,        // Target ID if merging into existing
       create_new_folder,       // boolean
       new_folder_name,         // string if create_new_folder is true
@@ -160,7 +205,6 @@ router.post('/merge', (req, res) => {
       return res.status(400).json({ error: 'Vui lòng chọn ít nhất 1 thư mục nguồn để gộp' });
     }
 
-    // Determine target folder
     let finalTargetId = target_folder_id;
 
     if (create_new_folder) {
@@ -168,45 +212,41 @@ router.post('/merge', (req, res) => {
         return res.status(400).json({ error: 'Vui lòng nhập tên thư mục mới cần tạo để gộp' });
       }
 
-      const createRes = db.prepare(`
-        INSERT INTO folders (user_id, name, description, color, icon)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(userId, new_folder_name.trim(), new_folder_desc ? new_folder_desc.trim() : 'Thư mục được gộp tự động', new_folder_color, 'layers');
+      const newFolder = await Folder.create({
+        user_id: userId,
+        name: new_folder_name.trim(),
+        description: new_folder_desc ? new_folder_desc.trim() : 'Thư mục được gộp tự động',
+        color: new_folder_color,
+        icon: 'layers'
+      });
 
-      finalTargetId = Number(createRes.lastInsertRowid);
+      finalTargetId = newFolder._id.toString();
     } else {
-      if (!finalTargetId) {
-        return res.status(400).json({ error: 'Vui lòng chọn thư mục đích' });
+      if (!finalTargetId || !mongoose.Types.ObjectId.isValid(finalTargetId)) {
+        return res.status(400).json({ error: 'Vui lòng chọn thư mục đích hợp lệ' });
       }
 
-      const targetFolder = db.prepare('SELECT id, name FROM folders WHERE id = ? AND user_id = ?').get(finalTargetId, userId);
+      const targetFolder = await Folder.findOne({ _id: finalTargetId, user_id: userId });
       if (!targetFolder) {
         return res.status(404).json({ error: 'Thư mục đích không tồn tại hoặc không thuộc quyền sở hữu của bạn' });
       }
     }
 
-    // Get all existing words in target folder to avoid duplicates if deduplicate is true
-    const existingCardsInTarget = db.prepare('SELECT LOWER(TRIM(word)) as word_lower FROM cards WHERE folder_id = ?').all(finalTargetId);
-    const existingWordsSet = new Set(existingCardsInTarget.map(c => c.word_lower));
+    // Existing words in target folder to deduplicate
+    const existingCardsInTarget = await Card.find({ folder_id: finalTargetId }).select('word');
+    const existingWordsSet = new Set(existingCardsInTarget.map(c => c.word.trim().toLowerCase()));
 
     let movedCount = 0;
     let skippedCount = 0;
 
-    const insertCardStmt = db.prepare(`
-      INSERT INTO cards (folder_id, user_id, word, phonetic, meaning, part_of_speech, level, example_en, example_vi, note, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    // Process each source folder
     for (const srcId of source_folder_ids) {
-      // Don't merge a folder into itself
-      if (Number(srcId) === Number(finalTargetId)) continue;
+      if (srcId.toString() === finalTargetId.toString()) continue;
 
-      // Verify ownership
-      const srcFolder = db.prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?').get(srcId, userId);
+      if (!mongoose.Types.ObjectId.isValid(srcId)) continue;
+      const srcFolder = await Folder.findOne({ _id: srcId, user_id: userId });
       if (!srcFolder) continue;
 
-      const srcCards = db.prepare('SELECT * FROM cards WHERE folder_id = ? AND user_id = ?').all(srcId, userId);
+      const srcCards = await Card.find({ folder_id: srcId, user_id: userId });
 
       for (const card of srcCards) {
         const wordKey = card.word.trim().toLowerCase();
@@ -215,48 +255,45 @@ router.post('/merge', (req, res) => {
           continue;
         }
 
-        insertCardStmt.run(
-          finalTargetId,
-          userId,
-          card.word,
-          card.phonetic,
-          card.meaning,
-          card.part_of_speech,
-          card.level || 'B1',
-          card.example_en,
-          card.example_vi,
-          card.note,
-          card.status
-        );
+        await Card.create({
+          folder_id: finalTargetId,
+          user_id: userId,
+          word: card.word,
+          phonetic: card.phonetic,
+          meaning: card.meaning,
+          part_of_speech: card.part_of_speech,
+          level: card.level || 'B1',
+          example_en: card.example_en,
+          example_vi: card.example_vi,
+          note: card.note,
+          status: card.status
+        });
+
         existingWordsSet.add(wordKey);
         movedCount++;
       }
 
-      // If user chose to delete source folders
       if (delete_source) {
-        db.prepare('DELETE FROM cards WHERE folder_id = ? AND user_id = ?').run(srcId, userId);
-        db.prepare('DELETE FROM folders WHERE id = ? AND user_id = ?').run(srcId, userId);
+        await Card.deleteMany({ folder_id: srcId, user_id: userId });
+        await Folder.deleteOne({ _id: srcId, user_id: userId });
       }
     }
 
-    // Touch target folder updated_at
-    db.prepare('UPDATE folders SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(finalTargetId);
+    await Folder.findByIdAndUpdate(finalTargetId, { updated_at: new Date() });
 
-    const targetFolderData = db.prepare(`
-      SELECT 
-        f.*,
-        COUNT(c.id) as card_count,
-        SUM(CASE WHEN c.status = 'mastered' THEN 1 ELSE 0 END) as mastered_count,
-        SUM(CASE WHEN c.status = 'learning' THEN 1 ELSE 0 END) as learning_count
-      FROM folders f
-      LEFT JOIN cards c ON f.id = c.folder_id
-      WHERE f.id = ?
-      GROUP BY f.id
-    `).get(finalTargetId);
+    const targetFolderDoc = await Folder.findById(finalTargetId);
+    const cardCount = await Card.countDocuments({ folder_id: finalTargetId });
+    const masteredCount = await Card.countDocuments({ folder_id: finalTargetId, status: 'mastered' });
+    const learningCount = await Card.countDocuments({ folder_id: finalTargetId, status: 'learning' });
 
     res.json({
       message: `Gộp thư mục thành công! Đã thêm ${movedCount} từ vựng mới${skippedCount > 0 ? ` (bỏ qua ${skippedCount} từ bị trùng lặp)` : ''}.`,
-      target_folder: targetFolderData,
+      target_folder: {
+        ...targetFolderDoc.toJSON(),
+        card_count: cardCount,
+        mastered_count: masteredCount,
+        learning_count: learningCount
+      },
       moved_count: movedCount,
       skipped_count: skippedCount
     });

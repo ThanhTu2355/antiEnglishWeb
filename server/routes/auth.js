@@ -1,13 +1,17 @@
-const express = require('express');
+﻿const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { db, seedDefaultData } = require('../db');
+const User = require('../models/User');
+const Folder = require('../models/Folder');
+const Card = require('../models/Card');
+const PracticeHistory = require('../models/PracticeHistory');
+const { seedDefaultData } = require('../config/db');
 const { authenticateToken, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Register new user
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { username, email, password, full_name } = req.body;
 
@@ -15,7 +19,10 @@ router.post('/register', (req, res) => {
       return res.status(400).json({ error: 'Vui lòng điền đầy đủ tên đăng nhập, email và mật khẩu' });
     }
 
-    if (username.length < 3) {
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (cleanUsername.length < 3) {
       return res.status(400).json({ error: 'Tên đăng nhập phải có ít nhất 3 ký tự' });
     }
 
@@ -24,9 +31,12 @@ router.post('/register', (req, res) => {
     }
 
     // Check existing
-    const existing = db.prepare('SELECT id, username, email FROM users WHERE username = ? OR email = ?').get(username.trim(), email.trim().toLowerCase());
+    const existing = await User.findOne({
+      $or: [{ username: cleanUsername }, { email: cleanEmail }]
+    });
+
     if (existing) {
-      if (existing.username === username.trim()) {
+      if (existing.username === cleanUsername) {
         return res.status(400).json({ error: 'Tên đăng nhập này đã được sử dụng' });
       }
       return res.status(400).json({ error: 'Email này đã được sử dụng' });
@@ -35,28 +45,28 @@ router.post('/register', (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const password_hash = bcrypt.hashSync(password, salt);
 
-    const result = db.prepare(`
-      INSERT INTO users (username, email, password_hash, full_name)
-      VALUES (?, ?, ?, ?)
-    `).run(username.trim(), email.trim().toLowerCase(), password_hash, full_name ? full_name.trim() : username.trim());
-
-    const newUserId = Number(result.lastInsertRowid);
+    const newUser = await User.create({
+      username: cleanUsername,
+      email: cleanEmail,
+      password_hash,
+      full_name: full_name ? full_name.trim() : username.trim()
+    });
 
     // Seed sample vocabulary sets for the new user so they can start immediately!
-    seedDefaultData(newUserId);
+    await seedDefaultData(newUser._id);
 
-    const user = {
-      id: newUserId,
-      username: username.trim(),
-      email: email.trim().toLowerCase(),
-      full_name: full_name ? full_name.trim() : username.trim()
+    const userData = {
+      id: newUser._id.toString(),
+      username: newUser.username,
+      email: newUser.email,
+      full_name: newUser.full_name
     };
 
-    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       message: 'Đăng ký thành công!',
-      user,
+      user: userData,
       token
     });
   } catch (err) {
@@ -66,7 +76,7 @@ router.post('/register', (req, res) => {
 });
 
 // Login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -74,8 +84,10 @@ router.post('/login', (req, res) => {
       return res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập và mật khẩu' });
     }
 
-    const cleanInput = username.trim();
-    const user = db.prepare('SELECT * FROM users WHERE username = ? OR email = ?').get(cleanInput, cleanInput.toLowerCase());
+    const cleanInput = username.trim().toLowerCase();
+    const user = await User.findOne({
+      $or: [{ username: cleanInput }, { email: cleanInput }]
+    });
 
     if (!user) {
       return res.status(401).json({ error: 'Tài khoản hoặc mật khẩu không chính xác' });
@@ -87,7 +99,7 @@ router.post('/login', (req, res) => {
     }
 
     const userData = {
-      id: user.id,
+      id: user._id.toString(),
       username: user.username,
       email: user.email,
       full_name: user.full_name || user.username
@@ -96,7 +108,7 @@ router.post('/login', (req, res) => {
     const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
-      message: 'Đăng nhập thành công!',
+      message: 'Đăng ký thành công!',
       user: userData,
       token
     });
@@ -107,27 +119,40 @@ router.post('/login', (req, res) => {
 });
 
 // Get current user profile & stats
-router.get('/me', authenticateToken, (req, res) => {
+router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = db.prepare('SELECT id, username, email, full_name, created_at FROM users WHERE id = ?').get(req.user.id);
+    const user = await User.findById(req.user.id).select('-password_hash');
     if (!user) {
       return res.status(404).json({ error: 'Không tìm thấy người dùng' });
     }
 
     // Stats
-    const folderCount = db.prepare('SELECT COUNT(*) as count FROM folders WHERE user_id = ?').get(req.user.id).count;
-    const cardStats = db.prepare(`
-      SELECT 
-        COUNT(*) as total_cards,
-        SUM(CASE WHEN status = 'mastered' THEN 1 ELSE 0 END) as mastered_cards,
-        SUM(CASE WHEN status != 'mastered' THEN 1 ELSE 0 END) as unmastered_cards,
-        SUM(CASE WHEN status = 'learning' THEN 1 ELSE 0 END) as learning_cards,
-        SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_cards
-      FROM cards 
-      WHERE user_id = ?
-    `).get(req.user.id);
+    const folderCount = await Folder.countDocuments({ user_id: req.user.id });
+    
+    // Aggregations on cards for current user
+    const statsResult = await Card.aggregate([
+      { $match: { user_id: user._id } },
+      {
+        $group: {
+          _id: null,
+          total_cards: { $sum: 1 },
+          mastered_cards: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+          unmastered_cards: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
+          learning_cards: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
+          new_cards: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } }
+        }
+      }
+    ]);
 
-    const practiceCount = db.prepare('SELECT COUNT(*) as count FROM practice_history WHERE user_id = ?').get(req.user.id).count;
+    const cardStats = statsResult[0] || {
+      total_cards: 0,
+      mastered_cards: 0,
+      unmastered_cards: 0,
+      learning_cards: 0,
+      new_cards: 0
+    };
+
+    const practiceCount = await PracticeHistory.countDocuments({ user_id: req.user.id });
 
     res.json({
       user,

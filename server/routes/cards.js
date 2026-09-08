@@ -1,47 +1,46 @@
-const express = require('express');
-const { db } = require('../db');
+﻿const express = require('express');
+const mongoose = require('mongoose');
+const Card = require('../models/Card');
+const Folder = require('../models/Folder');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // Get cards with optional filters
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const { folder_id, search, status, level } = req.query;
 
-    let query = 'SELECT * FROM cards WHERE user_id = ?';
-    const params = [userId];
+    const filter = { user_id: userId };
 
-    if (folder_id) {
-      query += ' AND folder_id = ?';
-      params.push(folder_id);
+    if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+      filter.folder_id = folder_id;
     }
 
     if (status && status !== 'all') {
       if (status === 'unmastered') {
-        query += " AND status != 'mastered'";
+        filter.status = { $ne: 'mastered' };
       } else {
-        query += ' AND status = ?';
-        params.push(status);
+        filter.status = status;
       }
     }
 
     if (level && level !== 'all') {
-      query += ' AND level = ?';
-      params.push(level);
+      filter.level = level;
     }
 
-    if (search) {
-      query += ' AND (word LIKE ? OR meaning LIKE ? OR example_en LIKE ?)';
-      const term = `%${search.trim()}%`;
-      params.push(term, term, term);
+    if (search && search.trim()) {
+      const reg = new RegExp(search.trim(), 'i');
+      filter.$or = [
+        { word: reg },
+        { meaning: reg },
+        { example_en: reg }
+      ];
     }
 
-    query += ' ORDER BY id DESC';
-
-    const cards = db.prepare(query).all(...params);
+    const cards = await Card.find(filter).sort({ _id: -1 });
     res.json(cards);
   } catch (err) {
     console.error('Get cards error:', err);
@@ -50,12 +49,16 @@ router.get('/', (req, res) => {
 });
 
 // Get single card
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const cardId = req.params.id;
     const userId = req.user.id;
 
-    const card = db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(cardId, userId);
+    if (!mongoose.Types.ObjectId.isValid(cardId)) {
+      return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
+    }
+
+    const card = await Card.findOne({ _id: cardId, user_id: userId });
     if (!card) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
@@ -68,7 +71,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create single card
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const {
@@ -83,8 +86,8 @@ router.post('/', (req, res) => {
       note = ''
     } = req.body;
 
-    if (!folder_id) {
-      return res.status(400).json({ error: 'Vui lòng chọn thư mục cho từ vựng' });
+    if (!folder_id || !mongoose.Types.ObjectId.isValid(folder_id)) {
+      return res.status(400).json({ error: 'Vui lòng chọn thư mục hợp lệ cho từ vựng' });
     }
 
     if (!word || !word.trim() || !meaning || !meaning.trim()) {
@@ -92,31 +95,27 @@ router.post('/', (req, res) => {
     }
 
     // Verify folder belongs to user
-    const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?').get(folder_id, userId);
+    const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
     if (!folder) {
       return res.status(404).json({ error: 'Thư mục không hợp lệ' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO cards (folder_id, user_id, word, phonetic, meaning, part_of_speech, level, example_en, example_vi, note, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
-    `).run(
+    const newCard = await Card.create({
       folder_id,
-      userId,
-      word.trim(),
-      phonetic.trim(),
-      meaning.trim(),
-      part_of_speech.trim(),
-      (level || 'B1').trim().toUpperCase(),
-      example_en.trim(),
-      example_vi.trim(),
-      note.trim()
-    );
+      user_id: userId,
+      word: word.trim(),
+      phonetic: phonetic.trim(),
+      meaning: meaning.trim(),
+      part_of_speech: part_of_speech.trim(),
+      level: (level || 'B1').trim().toUpperCase(),
+      example_en: example_en.trim(),
+      example_vi: example_vi.trim(),
+      note: note.trim(),
+      status: 'new'
+    });
 
-    // Update folder timestamp
-    db.prepare('UPDATE folders SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(folder_id);
+    await Folder.findByIdAndUpdate(folder_id, { updated_at: new Date() });
 
-    const newCard = db.prepare('SELECT * FROM cards WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({
       message: 'Thêm từ vựng thành công!',
       card: newCard
@@ -128,48 +127,47 @@ router.post('/', (req, res) => {
 });
 
 // Bulk import cards
-router.post('/bulk', (req, res) => {
+router.post('/bulk', async (req, res) => {
   try {
     const userId = req.user.id;
     const { folder_id, cards, default_level = 'B1' } = req.body;
 
-    if (!folder_id || !Array.isArray(cards) || cards.length === 0) {
+    if (!folder_id || !mongoose.Types.ObjectId.isValid(folder_id) || !Array.isArray(cards) || cards.length === 0) {
       return res.status(400).json({ error: 'Dữ liệu nhập hàng loạt không hợp lệ' });
     }
 
-    const folder = db.prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?').get(folder_id, userId);
+    const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
     if (!folder) {
       return res.status(404).json({ error: 'Thư mục không hợp lệ' });
     }
 
-    const insertStmt = db.prepare(`
-      INSERT INTO cards (folder_id, user_id, word, phonetic, meaning, part_of_speech, level, example_en, example_vi, note, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
-    `);
-
-    let count = 0;
+    const cardsToInsert = [];
     for (const c of cards) {
       if (!c.word || !c.meaning) continue;
-      insertStmt.run(
+      cardsToInsert.push({
         folder_id,
-        userId,
-        c.word.trim(),
-        (c.phonetic || '').trim(),
-        c.meaning.trim(),
-        (c.part_of_speech || 'noun').trim(),
-        (c.level || default_level || 'B1').trim().toUpperCase(),
-        (c.example_en || '').trim(),
-        (c.example_vi || '').trim(),
-        (c.note || '').trim()
-      );
-      count++;
+        user_id: userId,
+        word: c.word.trim(),
+        phonetic: (c.phonetic || '').trim(),
+        meaning: c.meaning.trim(),
+        part_of_speech: (c.part_of_speech || 'noun').trim(),
+        level: (c.level || default_level || 'B1').trim().toUpperCase(),
+        example_en: (c.example_en || '').trim(),
+        example_vi: (c.example_vi || '').trim(),
+        note: (c.note || '').trim(),
+        status: 'new'
+      });
     }
 
-    db.prepare('UPDATE folders SET updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(folder_id);
+    if (cardsToInsert.length > 0) {
+      await Card.insertMany(cardsToInsert);
+    }
+
+    await Folder.findByIdAndUpdate(folder_id, { updated_at: new Date() });
 
     res.status(201).json({
-      message: `Đã nhập thành công ${count} thẻ từ vựng!`,
-      imported_count: count
+      message: `Đã nhập thành công ${cardsToInsert.length} thẻ từ vựng!`,
+      imported_count: cardsToInsert.length
     });
   } catch (err) {
     console.error('Bulk import error:', err);
@@ -178,7 +176,7 @@ router.post('/bulk', (req, res) => {
 });
 
 // Update card
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const cardId = req.params.id;
     const userId = req.user.id;
@@ -194,34 +192,36 @@ router.put('/:id', (req, res) => {
       status
     } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(cardId)) {
+      return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
+    }
+
     if (!word || !word.trim() || !meaning || !meaning.trim()) {
       return res.status(400).json({ error: 'Từ tiếng Anh và Nghĩa không được để trống' });
     }
 
-    const existing = db.prepare('SELECT id, folder_id FROM cards WHERE id = ? AND user_id = ?').get(cardId, userId);
-    if (!existing) {
+    const updateData = {
+      word: word.trim(),
+      phonetic: phonetic.trim(),
+      meaning: meaning.trim(),
+      part_of_speech: part_of_speech.trim(),
+      level: (level || 'B1').trim().toUpperCase(),
+      example_en: example_en.trim(),
+      example_vi: example_vi.trim(),
+      note: note.trim()
+    };
+    if (status) updateData.status = status;
+
+    const updated = await Card.findOneAndUpdate(
+      { _id: cardId, user_id: userId },
+      updateData,
+      { new: true }
+    );
+
+    if (!updated) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
 
-    db.prepare(`
-      UPDATE cards 
-      SET word = ?, phonetic = ?, meaning = ?, part_of_speech = ?, level = ?, example_en = ?, example_vi = ?, note = ?, status = COALESCE(?, status)
-      WHERE id = ? AND user_id = ?
-    `).run(
-      word.trim(),
-      phonetic.trim(),
-      meaning.trim(),
-      part_of_speech.trim(),
-      (level || 'B1').trim().toUpperCase(),
-      example_en.trim(),
-      example_vi.trim(),
-      note.trim(),
-      status || null,
-      cardId,
-      userId
-    );
-
-    const updated = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
     res.json({
       message: 'Cập nhật từ vựng thành công!',
       card: updated
@@ -233,7 +233,7 @@ router.put('/:id', (req, res) => {
 });
 
 // Update card mastery status ('new' | 'learning' | 'mastered')
-router.patch('/:id/status', (req, res) => {
+router.patch('/:id/status', async (req, res) => {
   try {
     const cardId = req.params.id;
     const userId = req.user.id;
@@ -243,12 +243,19 @@ router.patch('/:id/status', (req, res) => {
       return res.status(400).json({ error: 'Trạng thái học không hợp lệ' });
     }
 
-    const card = db.prepare('SELECT id FROM cards WHERE id = ? AND user_id = ?').get(cardId, userId);
+    if (!mongoose.Types.ObjectId.isValid(cardId)) {
+      return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
+    }
+
+    const card = await Card.findOneAndUpdate(
+      { _id: cardId, user_id: userId },
+      { status },
+      { new: true }
+    );
+
     if (!card) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
-
-    db.prepare('UPDATE cards SET status = ? WHERE id = ? AND user_id = ?').run(status, cardId, userId);
 
     res.json({ message: 'Cập nhật trạng thái thành công', status });
   } catch (err) {
@@ -258,17 +265,20 @@ router.patch('/:id/status', (req, res) => {
 });
 
 // Delete card
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const cardId = req.params.id;
     const userId = req.user.id;
 
-    const card = db.prepare('SELECT id FROM cards WHERE id = ? AND user_id = ?').get(cardId, userId);
+    if (!mongoose.Types.ObjectId.isValid(cardId)) {
+      return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
+    }
+
+    const card = await Card.findOneAndDelete({ _id: cardId, user_id: userId });
     if (!card) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
 
-    db.prepare('DELETE FROM cards WHERE id = ? AND user_id = ?').run(cardId, userId);
     res.json({ message: 'Đã xóa thẻ từ vựng' });
   } catch (err) {
     console.error('Delete card error:', err);

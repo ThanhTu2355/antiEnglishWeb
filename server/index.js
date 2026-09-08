@@ -1,7 +1,8 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { connectDB } = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const folderRoutes = require('./routes/folders');
@@ -23,7 +24,12 @@ app.use('/api/practice', practiceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), app: 'AntiEnglish Web API' });
+  res.json({
+    status: 'ok',
+    database: 'MongoDB Atlas',
+    time: new Date().toISOString(),
+    app: 'AntiEnglish Web API'
+  });
 });
 
 // Serve frontend build if in production
@@ -43,9 +49,14 @@ app.use((req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`=========================================`);
-  console.log(`🚀 AntiEnglish Server running at http://localhost:${PORT}`);
-  console.log(`📚 Database SQLite ready at data/anti_english.db`);
-  console.log(`=========================================`);
-});
+async function startServer() {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`=========================================`);
+    console.log(`🚀 AntiEnglish Server running at http://localhost:${PORT}`);
+    console.log(`🍃 Database connected: MongoDB Atlas`);
+    console.log(`=========================================`);
+  });
+}
+
+startServer();

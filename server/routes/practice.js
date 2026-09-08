@@ -1,11 +1,13 @@
-const express = require('express');
-const { db } = require('../db');
+﻿const express = require('express');
+const mongoose = require('mongoose');
+const Card = require('../models/Card');
+const PracticeHistory = require('../models/PracticeHistory');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authenticateToken);
 
-// Helper to normalize strings for comparison (accent insensitive & remove extra punctuation)
+// Helper to normalize strings for comparison
 function normalizeString(str) {
   if (!str) return '';
   return str
@@ -23,8 +25,6 @@ function checkMeaningMatch(userAnswer, trueMeaning) {
   if (!normUser) return false;
   if (normUser === normTrue) return true;
 
-  // If trueMeaning has multiple meanings separated by comma or semicolon
-  // e.g., "từ bỏ, ruồng bỏ" -> user inputs "từ bỏ" is valid!
   const meanings = trueMeaning
     .split(/[,;\/]+/)
     .map(m => normalizeString(m))
@@ -40,39 +40,35 @@ function checkMeaningMatch(userAnswer, trueMeaning) {
 }
 
 // Generate practice questions
-router.get('/questions', (req, res) => {
+router.get('/questions', async (req, res) => {
   try {
     const userId = req.user.id;
     const { folder_id, limit = 10, mode = 'fill_meaning', level, status } = req.query;
 
-    let query = 'SELECT * FROM cards WHERE user_id = ?';
-    const params = [userId];
+    const matchFilter = { user_id: new mongoose.Types.ObjectId(userId) };
 
-    if (folder_id && folder_id !== 'all') {
-      query += ' AND folder_id = ?';
-      params.push(folder_id);
+    if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+      matchFilter.folder_id = new mongoose.Types.ObjectId(folder_id);
     }
 
     if (level && level !== 'all') {
-      query += ' AND level = ?';
-      params.push(level);
+      matchFilter.level = level;
     }
 
     if (status && status !== 'all') {
       if (status === 'unmastered') {
-        query += " AND status != 'mastered'";
+        matchFilter.status = { $ne: 'mastered' };
       } else {
-        query += ' AND status = ?';
-        params.push(status);
+        matchFilter.status = status;
       }
     }
 
-    query += ' ORDER BY RANDOM() LIMIT ?';
-    params.push(Number(limit) || 10);
+    const questionCards = await Card.aggregate([
+      { $match: matchFilter },
+      { $sample: { size: Number(limit) || 10 } }
+    ]);
 
-    const questionsCards = db.prepare(query).all(...params);
-
-    if (questionsCards.length === 0) {
+    if (questionCards.length === 0) {
       return res.json({
         total: 0,
         mode,
@@ -80,13 +76,14 @@ router.get('/questions', (req, res) => {
       });
     }
 
-    // Fetch all user cards for generating distractors if needed
-    const allUserCards = db.prepare('SELECT word, meaning FROM cards WHERE user_id = ?').all(userId);
+    // Fetch all user cards for generating distractors
+    const allUserCards = await Card.find({ user_id: userId }).select('meaning');
 
-    const questions = questionsCards.map((card, idx) => {
+    const questions = questionCards.map((card, idx) => {
+      const cardId = card._id.toString();
       const q = {
-        id: card.id,
-        card_id: card.id,
+        id: cardId,
+        card_id: cardId,
         index: idx + 1,
         word: card.word,
         phonetic: card.phonetic,
@@ -101,18 +98,15 @@ router.get('/questions', (req, res) => {
       };
 
       if (mode === 'multiple_choice') {
-        // Collect unique wrong choices
         const uniqueOtherMeanings = Array.from(new Set(
           allUserCards
             .map(c => (c.meaning || '').trim())
             .filter(m => m && m.toLowerCase() !== (card.meaning || '').trim().toLowerCase())
         ));
 
-        // Shuffle other meanings
         const shuffledOthers = uniqueOtherMeanings.sort(() => 0.5 - Math.random());
         const distractors = shuffledOthers.slice(0, 3);
 
-        // If not enough cards in user collection, provide fallback distractors
         const fallbackDistractors = ['thay đổi, biến đổi', 'phát triển mạnh mẽ', 'quan sát cẩn thận', 'hoàn thành mục tiêu', 'kết nối các phần', 'chú ý, xem xét'];
         while (distractors.length < 3 && fallbackDistractors.length > 0) {
           const fallback = fallbackDistractors.pop();
@@ -140,18 +134,18 @@ router.get('/questions', (req, res) => {
 });
 
 // Check single question answer
-router.post('/check', (req, res) => {
+router.post('/check', async (req, res) => {
   try {
     const cardId = req.body.card_id || req.body.id;
     const userAnswer = req.body.user_answer !== undefined ? req.body.user_answer : req.body.answer;
     const mode = req.body.mode || 'fill_meaning';
     const userId = req.user.id;
 
-    if (!cardId || userAnswer === undefined) {
+    if (!cardId || !mongoose.Types.ObjectId.isValid(cardId) || userAnswer === undefined) {
       return res.status(400).json({ error: 'Dữ liệu kiểm tra không đầy đủ' });
     }
 
-    const card = db.prepare('SELECT * FROM cards WHERE id = ? AND user_id = ?').get(cardId, userId);
+    const card = await Card.findOne({ _id: cardId, user_id: userId });
     if (!card) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
@@ -167,9 +161,8 @@ router.post('/check', (req, res) => {
       expectedAnswer = card.word;
     }
 
-    // Update card status dynamically based on answer
     const newStatus = isCorrect ? 'mastered' : 'learning';
-    db.prepare('UPDATE cards SET status = ? WHERE id = ?').run(newStatus, cardId);
+    await Card.findByIdAndUpdate(cardId, { status: newStatus });
 
     res.json({
       is_correct: isCorrect,
@@ -190,7 +183,7 @@ router.post('/check', (req, res) => {
 });
 
 // Submit final quiz results
-router.post('/submit', (req, res) => {
+router.post('/submit', async (req, res) => {
   try {
     const userId = req.user.id;
     const { folder_id, score, mode } = req.body;
@@ -200,16 +193,19 @@ router.post('/submit', (req, res) => {
       return res.status(400).json({ error: 'Thông tin kết quả không đầy đủ' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO practice_history (user_id, folder_id, score, total_questions, mode)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, folder_id || null, score, total_questions, mode || 'fill_meaning');
+    const history = await PracticeHistory.create({
+      user_id: userId,
+      folder_id: (folder_id && mongoose.Types.ObjectId.isValid(folder_id)) ? folder_id : null,
+      score,
+      total_questions,
+      mode: mode || 'fill_meaning'
+    });
 
     const accuracy = Math.round((score / total_questions) * 100);
 
     res.status(201).json({
       message: 'Đã lưu kết quả bài luyện tập!',
-      history_id: result.lastInsertRowid,
+      history_id: history._id.toString(),
       score,
       total_questions,
       accuracy
