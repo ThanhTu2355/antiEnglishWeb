@@ -83,6 +83,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ folder_id, cards })
     }),
+    bulkCreate: (data) => request('/cards/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
     update: (id, data) => request(`/cards/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)

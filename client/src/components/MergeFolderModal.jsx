@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, GitMerge, AlertCircle, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -53,7 +53,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
       const payload = {
         source_folder_ids: selectedSourceIds,
         create_new_folder: targetType === 'new',
-        target_folder_id: targetType === 'existing' ? Number(targetFolderId) : null,
+        target_folder_id: targetType === 'existing' ? targetFolderId : null,
         new_folder_name: newFolderName.trim(),
         new_folder_desc: newFolderDesc.trim(),
         delete_source: deleteSource,

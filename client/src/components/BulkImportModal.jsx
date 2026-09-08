@@ -91,7 +91,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
       setLoading(true);
       setError('');
       await api.cards.bulkCreate({
-        folder_id: Number(folderId),
+        folder_id: folderId,
         default_level: defaultLevel,
         cards: parsedCards
       });

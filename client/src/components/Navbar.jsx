@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { BookOpen, Sparkles, Layers, Award, LogOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import ThemeToggle from './ThemeToggle';
+import ConfirmModal from './ConfirmModal';
 
 export default function Navbar() {
   const { user, stats, logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const location = useLocation();
   const path = location.pathname;
 
@@ -102,7 +104,7 @@ export default function Navbar() {
               </div>
 
               <button
-                onClick={logout}
+                onClick={() => setShowLogoutConfirm(true)}
                 title="Đăng xuất"
                 className="p-1.5 sm:p-2 text-theme-subtle hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
               >
@@ -143,6 +145,21 @@ export default function Navbar() {
           <span>Điền nghĩa</span>
         </Link>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Xác nhận đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không? Tiến trình học tập của bạn đã được đồng bộ an toàn trên hệ thống."
+        confirmText="Đăng xuất"
+        cancelText="Ở lại"
+        type="warning"
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout();
+        }}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </header>
   );
 }

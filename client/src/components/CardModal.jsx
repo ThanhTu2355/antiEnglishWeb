@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, BookPlus, Sparkles } from 'lucide-react';
 import { api } from '../api/client';
 import TTSButton from './TTSButton';
@@ -63,7 +63,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setError('');
 
       const payload = {
-        folder_id: Number(folderId),
+        folder_id: folderId || cardToEdit?.folder_id,
         word: word.trim(),
         phonetic: phonetic.trim(),
         meaning: meaning.trim(),
@@ -75,7 +75,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       };
 
       if (cardToEdit) {
-        await api.cards.update(cardToEdit.id, payload);
+        await api.cards.update(cardToEdit.id || cardToEdit._id, payload);
       } else {
         await api.cards.create(payload);
       }

@@ -183,7 +183,7 @@ export default function FillMeaningPracticePage() {
         score,
         total_questions: questions.length,
         mode,
-        folder_id: selectedFolderId === 'all' ? null : Number(selectedFolderId)
+        folder_id: selectedFolderId === 'all' ? null : selectedFolderId
       });
       refreshUser?.();
     } catch (err) {
