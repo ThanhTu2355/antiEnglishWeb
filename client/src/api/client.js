@@ -75,7 +75,6 @@ export const api = {
       return request(`/cards${queryStr}`);
     },
     getById: (id) => request(`/cards/${id}`),
-    lookup: (word) => request(`/cards/lookup?word=${encodeURIComponent(word)}`),
     create: (data) => request('/cards', {
       method: 'POST',
       body: JSON.stringify(data)

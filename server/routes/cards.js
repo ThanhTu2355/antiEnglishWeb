@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const Folder = require('../models/Folder');
@@ -45,100 +45,6 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Get cards error:', err);
     res.status(500).json({ error: 'Không thể lấy danh sách từ vựng' });
-  }
-});
-
-const PREPOSITIONS = new Set([
-  'about', 'above', 'across', 'after', 'against', 'along', 'amid', 'among', 'around', 'at',
-  'before', 'behind', 'below', 'beneath', 'beside', 'between', 'beyond', 'by',
-  'concerning', 'despite', 'down', 'during', 'except', 'for', 'from', 'in',
-  'inside', 'into', 'like', 'near', 'of', 'off', 'on', 'onto', 'opposite',
-  'out', 'outside', 'over', 'past', 'regarding', 'round', 'since', 'through',
-  'throughout', 'till', 'to', 'toward', 'towards', 'under', 'underneath',
-  'until', 'unto', 'up', 'upon', 'with', 'within', 'without', 'via', 'per'
-]);
-
-function estimateCEFR(freq) {
-  if (freq >= 120) return 'A1';
-  if (freq >= 40) return 'A2';
-  if (freq >= 12) return 'B1';
-  if (freq >= 3.5) return 'B2';
-  if (freq >= 0.8) return 'C1';
-  return 'C2';
-}
-
-function formatIPA(raw) {
-  if (!raw) return '';
-  let ipa = raw.trim().replace(/ɫ/g, 'l');
-  if (ipa.startsWith('/')) ipa = ipa.slice(1);
-  if (ipa.endsWith('/')) ipa = ipa.slice(0, -1);
-  return `/${ipa}/`;
-}
-
-// Auto lookup word details (IPA, CEFR Level, Part of Speech)
-router.get('/lookup', async (req, res) => {
-  try {
-    const rawWord = req.query.word;
-    if (!rawWord || !rawWord.trim()) {
-      return res.status(400).json({ error: 'Vui lòng cung cấp từ vựng cần tra cứu' });
-    }
-
-    const word = rawWord.trim().toLowerCase();
-    const isPrep = PREPOSITIONS.has(word);
-
-    let phonetic = '';
-    let level = 'B1';
-    let part_of_speech = isPrep ? 'preposition' : 'noun';
-    let definition = '';
-
-    try {
-      const response = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word)}&max=1&md=dfrp&ipa=1`);
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const item = data[0];
-        const tags = item.tags || [];
-
-        for (const tag of tags) {
-          if (tag.startsWith('ipa_pron:')) {
-            phonetic = formatIPA(tag.replace('ipa_pron:', ''));
-          } else if (tag.startsWith('f:')) {
-            const freq = parseFloat(tag.replace('f:', '')) || 0;
-            level = estimateCEFR(freq);
-          }
-        }
-
-        if (isPrep) {
-          part_of_speech = 'preposition';
-        } else if (word.includes(' ')) {
-          part_of_speech = 'phrase';
-        } else if (item.defs && item.defs.length > 0) {
-          const firstDef = item.defs[0];
-          if (firstDef.startsWith('adj')) part_of_speech = 'adjective';
-          else if (firstDef.startsWith('v')) part_of_speech = 'verb';
-          else if (firstDef.startsWith('adv')) part_of_speech = 'adverb';
-          else if (firstDef.startsWith('n')) part_of_speech = 'noun';
-          definition = firstDef.split('\t')[1] || '';
-        } else {
-          if (tags.includes('adj')) part_of_speech = 'adjective';
-          else if (tags.includes('v')) part_of_speech = 'verb';
-          else if (tags.includes('adv')) part_of_speech = 'adverb';
-          else if (tags.includes('n')) part_of_speech = 'noun';
-        }
-      }
-    } catch (apiErr) {
-      console.warn('Datamuse API error:', apiErr.message);
-    }
-
-    res.json({
-      word,
-      phonetic,
-      level,
-      part_of_speech,
-      definition
-    });
-  } catch (err) {
-    console.error('Word lookup error:', err);
-    res.status(500).json({ error: 'Lỗi khi tra cứu từ vựng' });
   }
 });
 

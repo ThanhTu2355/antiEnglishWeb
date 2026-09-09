@@ -10,7 +10,7 @@ import CardModal from '../components/CardModal';
 import BulkImportModal from '../components/BulkImportModal';
 import ConfirmModal from '../components/ConfirmModal';
 import TTSButton from '../components/TTSButton';
-import { CEFR_LEVELS, getLevelBadge, getPartOfSpeechBadge } from '../utils/levels';
+import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
 
 export default function FolderDetailPage() {
   const { id: folderId } = useParams();
@@ -308,7 +308,7 @@ export default function FolderDetailPage() {
                         {card.level || 'B1'}
                       </span>
                       <span className="text-xs px-2.5 py-0.5 rounded-lg bg-tag-theme text-theme-muted font-semibold border border-theme-subtle">
-                        {getPartOfSpeechBadge(card.part_of_speech)}
+                        {card.part_of_speech || 'noun'}
                       </span>
                     </div>
 

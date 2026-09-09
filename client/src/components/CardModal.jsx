@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, BookPlus, Sparkles, Loader2, Wand2 } from 'lucide-react';
+import { X, BookPlus, Sparkles } from 'lucide-react';
 import { api } from '../api/client';
 import TTSButton from './TTSButton';
 import { CEFR_LEVELS } from '../utils/levels';
-import { lookupEnglishWord } from '../utils/dictionary';
 
 const SAMPLE_WORDS = [
   { word: 'resilience', phonetic: '/rɪˈzɪl.jəns/', meaning: 'khả năng phục hồi, kiên cường', pos: 'noun', level: 'C1', en: 'Courage and resilience are needed to face adversity.', vi: 'Lòng can đảm và sự kiên cường là cần thiết để đối mặt nghịch cảnh.', n: 'Gốc từ: resilire (bật lại)' },
@@ -27,13 +26,6 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto lookup states
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupNotice, setLookupNotice] = useState('');
-  const [manuallyChangedPhonetic, setManuallyChangedPhonetic] = useState(false);
-  const [manuallyChangedLevel, setManuallyChangedLevel] = useState(false);
-  const [manuallyChangedPOS, setManuallyChangedPOS] = useState(false);
-
   useEffect(() => {
     if (cardToEdit) {
       setWord(cardToEdit.word || '');
@@ -55,67 +47,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setNote('');
     }
     setError('');
-    setIsLookingUp(false);
-    setLookupNotice('');
-    setManuallyChangedPhonetic(false);
-    setManuallyChangedLevel(false);
-    setManuallyChangedPOS(false);
   }, [cardToEdit, isOpen]);
-
-  // Debounced auto-lookup when entering English word
-  useEffect(() => {
-    if (!isOpen || cardToEdit) return;
-    const cleanWord = word.trim();
-    if (cleanWord.length < 2) {
-      setLookupNotice('');
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        setIsLookingUp(true);
-        const info = await lookupEnglishWord(cleanWord);
-        if (info) {
-          if (!manuallyChangedPhonetic && info.phonetic) {
-            setPhonetic(info.phonetic);
-          }
-          if (!manuallyChangedLevel && info.level) {
-            setLevel(info.level);
-          }
-          if (!manuallyChangedPOS && info.partOfSpeech) {
-            setPartOfSpeech(info.partOfSpeech);
-          }
-          setLookupNotice(`Đã tự động nhận diện: ${info.phonetic ? info.phonetic + ' • ' : ''}Cấp bậc ${info.level}`);
-        }
-      } catch (err) {
-        console.warn('Auto lookup failed:', err);
-      } finally {
-        setIsLookingUp(false);
-      }
-    }, 450);
-
-    return () => clearTimeout(timer);
-  }, [word, isOpen, cardToEdit, manuallyChangedPhonetic, manuallyChangedLevel, manuallyChangedPOS]);
-
-  // Manual trigger for instant lookup
-  async function handleManualLookup() {
-    const cleanWord = word.trim();
-    if (!cleanWord) return;
-    try {
-      setIsLookingUp(true);
-      const info = await lookupEnglishWord(cleanWord);
-      if (info) {
-        if (info.phonetic) setPhonetic(info.phonetic);
-        if (info.level) setLevel(info.level);
-        if (info.partOfSpeech) setPartOfSpeech(info.partOfSpeech);
-        setLookupNotice(`Đã cập nhật: ${info.phonetic ? info.phonetic + ' • ' : ''}Cấp bậc ${info.level}`);
-      }
-    } catch (err) {
-      console.warn('Manual lookup failed:', err);
-    } finally {
-      setIsLookingUp(false);
-    }
-  }
 
   if (!isOpen) return null;
 
@@ -212,27 +144,9 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
           {/* Word & IPA */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-bold text-theme-main uppercase tracking-wider">
-                  Từ vựng tiếng Anh <span className="text-rose-400">*</span>
-                </label>
-                {word.trim().length >= 2 && (
-                  <button
-                    type="button"
-                    onClick={handleManualLookup}
-                    disabled={isLookingUp}
-                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Tự động tra phiên âm IPA và cấp bậc CEFR"
-                  >
-                    {isLookingUp ? (
-                      <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
-                    ) : (
-                      <Wand2 className="w-3 h-3 text-amber-400" />
-                    )}
-                    <span>{isLookingUp ? 'Đang tra...' : 'Tra tự động'}</span>
-                  </button>
-                )}
-              </div>
+              <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
+                Từ vựng tiếng Anh <span className="text-rose-400">*</span>
+              </label>
               <div className="relative">
                 <input
                   type="text"
@@ -248,12 +162,6 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                   </div>
                 )}
               </div>
-              {lookupNotice && (
-                <p className="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1 animate-fade-in">
-                  <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">{lookupNotice}</span>
-                </p>
-              )}
             </div>
 
             <div>
@@ -263,10 +171,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
               <input
                 type="text"
                 value={phonetic}
-                onChange={(e) => {
-                  setPhonetic(e.target.value);
-                  setManuallyChangedPhonetic(true);
-                }}
+                onChange={(e) => setPhonetic(e.target.value)}
                 placeholder="/ˌkɒm.prɪˈhend/"
                 className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -296,10 +201,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 </label>
                 <select
                   value={level}
-                  onChange={(e) => {
-                    setLevel(e.target.value);
-                    setManuallyChangedLevel(true);
-                  }}
+                  onChange={(e) => setLevel(e.target.value)}
                   className="w-full px-3 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-sm"
                 >
                   {CEFR_LEVELS.map(lvl => (
@@ -314,17 +216,13 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 </label>
                 <select
                   value={partOfSpeech}
-                  onChange={(e) => {
-                    setPartOfSpeech(e.target.value);
-                    setManuallyChangedPOS(true);
-                  }}
+                  onChange={(e) => setPartOfSpeech(e.target.value)}
                   className="w-full px-3 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-sm"
                 >
                   <option value="noun">Danh từ (n)</option>
                   <option value="verb">Động từ (v)</option>
                   <option value="adjective">Tính từ (adj)</option>
                   <option value="adverb">Trạng từ (adv)</option>
-                  <option value="preposition">Giới từ (prep)</option>
                   <option value="phrase">Cụm từ (phrase)</option>
                   <option value="idiom">Thành ngữ (idiom)</option>
                 </select>
