@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import TTSButton from '../components/TTSButton';
-import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
+import { CEFR_LEVELS, getLevelBadge, getPartOfSpeechBadge } from '../utils/levels';
 
 export default function FlashcardStudyPage() {
   const { folderId } = useParams();
@@ -350,7 +350,7 @@ export default function FlashcardStudyPage() {
                   {currentCard.level || 'B1'}
                 </span>
                 <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
-                  {currentCard.part_of_speech || 'Từ vựng'}
+                  {getPartOfSpeechBadge(currentCard.part_of_speech)}
                 </span>
               </div>
 
