@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, GitMerge, AlertCircle, Trash2 } from 'lucide-react';
+import { X, GitMerge, AlertCircle, Trash2, Folder } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 import { api } from '../api/client';
 
 export default function MergeFolderModal({ isOpen, onClose, folders, onMerged }) {
@@ -180,18 +181,21 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                     Bạn đã chọn hết tất cả thư mục làm nguồn. Vui lòng chọn "Tạo thư mục mới" hoặc bỏ chọn bớt thư mục nguồn.
                   </p>
                 ) : (
-                  <select
+                  <CustomSelect
                     value={targetFolderId}
-                    onChange={(e) => setTargetFolderId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="">-- Chọn thư mục đích --</option>
-                    {availableTargetFolders.map(f => (
-                      <option key={f.id} value={f.id}>
-                        {f.name} (hiện có {f.card_count || 0} từ)
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setTargetFolderId}
+                    placeholder="-- Chọn thư mục đích --"
+                    options={[
+                      { value: '', label: '-- Chọn thư mục đích --', icon: Folder, iconColor: 'text-theme-subtle' },
+                      ...availableTargetFolders.map(f => ({
+                        value: f.id,
+                        label: f.name,
+                        icon: Folder,
+                        iconColor: 'text-indigo-400',
+                        count: f.card_count || 0
+                      }))
+                    ]}
+                  />
                 )}
               </div>
             ) : (

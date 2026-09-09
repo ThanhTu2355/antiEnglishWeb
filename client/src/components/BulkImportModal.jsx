@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UploadCloud, Sparkles, Check } from 'lucide-react';
 import { api } from '../api/client';
+import CustomSelect from './CustomSelect';
 import { CEFR_LEVELS } from '../utils/levels';
 
 const PRESETS = [
@@ -154,17 +155,17 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
               Cấp bậc CEFR mặc định (nếu dòng không ghi cấp bậc):
             </label>
-            <select
+            <CustomSelect
               value={defaultLevel}
-              onChange={(e) => setDefaultLevel(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              {CEFR_LEVELS.map(lvl => (
-                <option key={lvl.id} value={lvl.id}>
-                  {lvl.label}
-                </option>
-              ))}
-            </select>
+              onChange={setDefaultLevel}
+              options={CEFR_LEVELS.map(lvl => ({
+                value: lvl.id,
+                label: lvl.label,
+                badge: lvl.id,
+                badgeClass: lvl.badgeClass
+              }))}
+              className="w-full"
+            />
           </div>
 
           {/* Text Area */}

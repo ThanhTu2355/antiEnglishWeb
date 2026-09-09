@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, BookPlus, Sparkles } from 'lucide-react';
 import { api } from '../api/client';
 import TTSButton from './TTSButton';
+import CustomSelect from './CustomSelect';
 import { CEFR_LEVELS } from '../utils/levels';
 
 const SAMPLE_WORDS = [
@@ -48,6 +49,23 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
     }
     setError('');
   }, [cardToEdit, isOpen]);
+
+  const cefrOptions = CEFR_LEVELS.map(lvl => ({
+    value: lvl.id,
+    label: lvl.id,
+    badge: lvl.id,
+    badgeClass: lvl.badgeClass
+  }));
+
+  const posOptions = [
+    { value: 'noun', label: 'Danh từ (n)' },
+    { value: 'verb', label: 'Động từ (v)' },
+    { value: 'adjective', label: 'Tính từ (adj)' },
+    { value: 'adverb', label: 'Trạng từ (adv)' },
+    { value: 'preposition', label: 'Giới từ (prep)' },
+    { value: 'phrase', label: 'Cụm từ (phrase)' },
+    { value: 'idiom', label: 'Thành ngữ (idiom)' }
+  ];
 
   if (!isOpen) return null;
 
@@ -199,33 +217,24 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
                   Cấp bậc CEFR
                 </label>
-                <select
+                <CustomSelect
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-sm"
-                >
-                  {CEFR_LEVELS.map(lvl => (
-                    <option key={lvl.id} value={lvl.id}>{lvl.id}</option>
-                  ))}
-                </select>
+                  onChange={setLevel}
+                  options={cefrOptions}
+                  className="w-full"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
                   Loại từ
                 </label>
-                <select
+                <CustomSelect
                   value={partOfSpeech}
-                  onChange={(e) => setPartOfSpeech(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-sm"
-                >
-                  <option value="noun">Danh từ (n)</option>
-                  <option value="verb">Động từ (v)</option>
-                  <option value="adjective">Tính từ (adj)</option>
-                  <option value="adverb">Trạng từ (adv)</option>
-                  <option value="phrase">Cụm từ (phrase)</option>
-                  <option value="idiom">Thành ngữ (idiom)</option>
-                </select>
+                  onChange={setPartOfSpeech}
+                  options={posOptions}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

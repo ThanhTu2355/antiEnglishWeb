@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, UploadCloud, BookOpen, Award, 
-  Search, Edit3, Trash2, CheckCircle2 
+  Search, Edit3, Trash2, CheckCircle2, Layers, XCircle, Clock, Sparkles 
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import CardModal from '../components/CardModal';
 import BulkImportModal from '../components/BulkImportModal';
 import ConfirmModal from '../components/ConfirmModal';
+import CustomSelect from '../components/CustomSelect';
 import TTSButton from '../components/TTSButton';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
 
@@ -71,7 +72,7 @@ export default function FolderDetailPage() {
       await loadData();
       refreshUser?.();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message || 'Lỗi khi xóa từ vựng');
     } finally {
       setIsDeleting(false);
     }
@@ -116,6 +117,61 @@ export default function FolderDetailPage() {
       </div>
     );
   }
+
+  const statusOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả trạng thái',
+      count: cards.length,
+      icon: Layers,
+      iconColor: 'text-indigo-400'
+    },
+    {
+      value: 'unmastered',
+      label: 'Chưa thuộc',
+      count: cards.filter(c => c.status !== 'mastered').length,
+      icon: XCircle,
+      iconColor: 'text-rose-400'
+    },
+    {
+      value: 'mastered',
+      label: 'Đã thuộc',
+      count: cards.filter(c => c.status === 'mastered').length,
+      icon: CheckCircle2,
+      iconColor: 'text-emerald-400'
+    },
+    {
+      value: 'learning',
+      label: 'Đang học',
+      count: cards.filter(c => c.status === 'learning').length,
+      icon: Clock,
+      iconColor: 'text-amber-400'
+    },
+    {
+      value: 'new',
+      label: 'Từ mới',
+      count: cards.filter(c => c.status === 'new').length,
+      icon: Sparkles,
+      iconColor: 'text-sky-400'
+    }
+  ];
+
+  const levelOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả cấp bậc',
+      count: cards.length,
+      icon: Award,
+      iconColor: 'text-indigo-400'
+    },
+    ...CEFR_LEVELS.map(lvl => ({
+      value: lvl.id,
+      label: `Cấp ${lvl.id}`,
+      count: cards.filter(c => (c.level || 'B1') === lvl.id).length,
+      badge: lvl.id,
+      badgeClass: lvl.badgeClass
+    }))
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in transition-colors duration-200">
@@ -214,34 +270,20 @@ export default function FolderDetailPage() {
           </div>
 
           {/* Status filter */}
-          <select
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3.5 py-2.5 bg-surface border border-theme rounded-2xl text-sm text-theme-main font-medium shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0"
-          >
-            <option value="all">Tất cả trạng thái ({cards.length})</option>
-            <option value="unmastered">❌ Chưa thuộc ({cards.filter(c => c.status !== 'mastered').length})</option>
-            <option value="mastered">✅ Đã thuộc ({cards.filter(c => c.status === 'mastered').length})</option>
-            <option value="learning">Đang học ({cards.filter(c => c.status === 'learning').length})</option>
-            <option value="new">Từ mới ({cards.filter(c => c.status === 'new').length})</option>
-          </select>
+            onChange={setStatusFilter}
+            options={statusOptions}
+            className="shrink-0"
+          />
 
           {/* Level filter */}
-          <select
+          <CustomSelect
             value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            className="px-3.5 py-2.5 bg-surface border border-theme rounded-2xl text-sm text-theme-main font-medium shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0"
-          >
-            <option value="all">Tất cả cấp bậc ({cards.length})</option>
-            {CEFR_LEVELS.map(lvl => {
-              const count = cards.filter(c => (c.level || 'B1') === lvl.id).length;
-              return (
-                <option key={lvl.id} value={lvl.id}>
-                  Cấp {lvl.id} ({count})
-                </option>
-              );
-            })}
-          </select>
+            onChange={setLevelFilter}
+            options={levelOptions}
+            className="shrink-0"
+          />
         </div>
 
         {/* Action Buttons */}

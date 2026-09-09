@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, Sparkles, Layers, Award, LogOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import ThemeToggle from './ThemeToggle';
@@ -7,7 +7,10 @@ import ConfirmModal from './ConfirmModal';
 
 export default function Navbar() {
   const { user, stats, logout } = useAuth();
+  const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showStudyExitConfirm, setShowStudyExitConfirm] = useState(false);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState(null);
   const location = useLocation();
   const path = location.pathname;
 
@@ -15,12 +18,34 @@ export default function Navbar() {
   const isFlashcards = path.startsWith('/flashcards');
   const isPractice = path.startsWith('/practice');
 
+  function handleNavClick(e, targetUrl) {
+    if (window.__hasActiveStudySession && path !== targetUrl) {
+      e.preventDefault();
+      setPendingNavigationUrl(targetUrl);
+      setShowStudyExitConfirm(true);
+    }
+  }
+
+  function confirmExitStudy() {
+    window.__hasActiveStudySession = false;
+    setShowStudyExitConfirm(false);
+    if (pendingNavigationUrl) {
+      navigate(pendingNavigationUrl);
+      setPendingNavigationUrl(null);
+    }
+  }
+
   return (
-    <header className="sticky top-0 z-40 bg-header-theme backdrop-blur-md border-b border-theme shadow-xs transition-colors duration-200">
+    <>
+      <header className="sticky top-0 z-40 bg-header-theme backdrop-blur-md border-b border-theme shadow-xs transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2 lg:gap-4 min-w-0">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer shrink-0">
+          <Link
+            to="/"
+            onClick={(e) => handleNavClick(e, '/')}
+            className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer shrink-0"
+          >
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
@@ -36,6 +61,7 @@ export default function Navbar() {
           <nav className="hidden md:flex items-center space-x-1 shrink-0">
             <Link
               to="/"
+              onClick={(e) => handleNavClick(e, '/')}
               className={`px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
                 isDashboard
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 font-bold'
@@ -48,6 +74,7 @@ export default function Navbar() {
 
             <Link
               to="/flashcards"
+              onClick={(e) => handleNavClick(e, '/flashcards')}
               className={`px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
                 isFlashcards
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 font-bold'
@@ -60,6 +87,7 @@ export default function Navbar() {
 
             <Link
               to="/practice"
+              onClick={(e) => handleNavClick(e, '/practice')}
               className={`px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all flex items-center space-x-1.5 shrink-0 whitespace-nowrap ${
                 isPractice
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 font-bold'
@@ -119,6 +147,7 @@ export default function Navbar() {
       <div className="md:hidden flex items-center justify-around py-2 border-t border-theme bg-surface text-xs">
         <Link
           to="/"
+          onClick={(e) => handleNavClick(e, '/')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
             isDashboard ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
@@ -128,6 +157,7 @@ export default function Navbar() {
         </Link>
         <Link
           to="/flashcards"
+          onClick={(e) => handleNavClick(e, '/flashcards')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
             isFlashcards ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
@@ -137,6 +167,7 @@ export default function Navbar() {
         </Link>
         <Link
           to="/practice"
+          onClick={(e) => handleNavClick(e, '/practice')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
             isPractice ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
@@ -145,21 +176,37 @@ export default function Navbar() {
           <span>Điền nghĩa</span>
         </Link>
       </div>
-
-      {/* Logout Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showLogoutConfirm}
-        title="Xác nhận đăng xuất"
-        message="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không? Tiến trình học tập của bạn đã được đồng bộ an toàn trên hệ thống."
-        confirmText="Đăng xuất"
-        cancelText="Ở lại"
-        type="warning"
-        onConfirm={() => {
-          setShowLogoutConfirm(false);
-          logout();
-        }}
-        onClose={() => setShowLogoutConfirm(false)}
-      />
     </header>
+
+    {/* Logout Confirmation Modal */}
+    <ConfirmModal
+      isOpen={showLogoutConfirm}
+      title="Xác nhận đăng xuất"
+      message="Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không? Tiến trình học tập của bạn đã được đồng bộ an toàn trên hệ thống."
+      confirmText="Đăng xuất"
+      cancelText="Ở lại"
+      type="warning"
+      onConfirm={() => {
+        setShowLogoutConfirm(false);
+        logout();
+      }}
+      onClose={() => setShowLogoutConfirm(false)}
+    />
+
+    {/* Active Study Session Navigation Confirm Modal */}
+    <ConfirmModal
+      isOpen={showStudyExitConfirm}
+      title="Rời khỏi phiên học?"
+      message="Bạn đang trong phiên học từ vựng. Rời khỏi lúc này sẽ kết thúc lượt học hiện tại. Bạn có chắc chắn muốn quay về không?"
+      confirmText="Rời khỏi"
+      cancelText="Ở lại tiếp tục học"
+      type="warning"
+      onConfirm={confirmExitStudy}
+      onClose={() => {
+        setShowStudyExitConfirm(false);
+        setPendingNavigationUrl(null);
+      }}
+    />
+  </>
   );
 }

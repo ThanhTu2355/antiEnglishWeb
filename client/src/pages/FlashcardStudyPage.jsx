@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, RotateCw, Volume2, Shuffle, Check, X, 
-  Sparkles, Award, ArrowRight, BookOpen
+  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import TTSButton from '../components/TTSButton';
+import CustomSelect from '../components/CustomSelect';
+import ConfirmModal from '../components/ConfirmModal';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
 
 export default function FlashcardStudyPage() {
@@ -25,6 +27,21 @@ export default function FlashcardStudyPage() {
   const [loading, setLoading] = useState(true);
   const [studyDone, setStudyDone] = useState(false);
   const [masteredCount, setMasteredCount] = useState(0);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  function speakWord(text) {
+    if (!text || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel')));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+    window.speechSynthesis.speak(utterance);
+  }
 
   useEffect(() => {
     if (folderId) {
@@ -40,10 +57,43 @@ export default function FlashcardStudyPage() {
     loadCards();
   }, [selectedFolderId, selectedLevel, selectedStatus]);
 
+  // Track active study session for exit confirmation pop-up
+  useEffect(() => {
+    const isSessionActive = !studyDone && cards.length > 0;
+    window.__hasActiveStudySession = isSessionActive;
+
+    if (isSessionActive) {
+      // Push history entry to intercept browser back button
+      window.history.pushState({ inStudySession: true }, '');
+
+      function handlePopState() {
+        window.history.pushState({ inStudySession: true }, '');
+        setShowExitConfirm(true);
+      }
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.__hasActiveStudySession = false;
+        window.removeEventListener('popstate', handlePopState);
+      };
+    } else {
+      window.__hasActiveStudySession = false;
+    }
+  }, [studyDone, cards.length]);
+
+  function handleBackClick() {
+    if (!studyDone && cards.length > 0) {
+      setShowExitConfirm(true);
+    } else {
+      navigate('/');
+    }
+  }
+
   // Keyboard shortcut listener
   useEffect(() => {
     function handleKeyDown(e) {
       if (studyDone || cards.length === 0) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       if (e.code === 'Space') {
         e.preventDefault();
@@ -56,6 +106,12 @@ export default function FlashcardStudyPage() {
         handleRate('learning');
       } else if (e.key === '2') {
         handleRate('mastered');
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        const word = cards[currentIndex]?.word;
+        if (word) {
+          speakWord(word);
+        }
       }
     }
 
@@ -253,57 +309,97 @@ export default function FlashcardStudyPage() {
     );
   }
 
+  const folderOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả thư mục',
+      icon: Layers,
+      iconColor: 'text-indigo-400'
+    },
+    ...folders.map(f => ({
+      value: f.id,
+      label: f.name,
+      icon: Folder,
+      iconColor: 'text-indigo-400',
+      count: f.card_count
+    }))
+  ];
+
+  const levelOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả cấp bậc',
+      icon: Award,
+      iconColor: 'text-indigo-400'
+    },
+    ...CEFR_LEVELS.map(lvl => ({
+      value: lvl.id,
+      label: `Cấp ${lvl.id}`,
+      badge: lvl.id,
+      badgeClass: lvl.badgeClass
+    }))
+  ];
+
+  const statusOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả trạng thái',
+      icon: Layers,
+      iconColor: 'text-indigo-400'
+    },
+    {
+      value: 'unmastered',
+      label: 'Chỉ từ chưa thuộc',
+      icon: XCircle,
+      iconColor: 'text-rose-400'
+    },
+    {
+      value: 'mastered',
+      label: 'Chỉ từ đã thuộc',
+      icon: CheckCircle2,
+      iconColor: 'text-emerald-400'
+    }
+  ];
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in transition-colors duration-200">
       {/* Top Header Controls */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
           <button
-            onClick={() => navigate('/')}
+            onClick={handleBackClick}
             className="p-2.5 bg-surface hover:bg-surface-hover text-theme-muted rounded-xl border border-theme shadow-xs transition-colors cursor-pointer shrink-0"
-            title="Quay lại"
+            title="Quay lại Trang chủ"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
 
           {/* Folder selector */}
-          <select
+          <CustomSelect
             value={selectedFolderId}
-            onChange={(e) => {
-              const val = e.target.value;
+            onChange={(val) => {
               setSelectedFolderId(val);
               navigate(val === 'all' ? '/flashcards' : `/flashcards/${val}`);
             }}
-            className="px-3.5 py-2.5 bg-surface border border-theme rounded-xl text-xs sm:text-sm text-theme-main font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0 max-w-[180px] sm:max-w-xs truncate"
-          >
-            <option value="all">Tất cả thư mục</option>
-            {folders.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
+            options={folderOptions}
+            className="shrink-0 max-w-[180px] sm:max-w-xs"
+          />
 
           {/* Level selector */}
-          <select
+          <CustomSelect
             value={selectedLevel}
-            onChange={(e) => setSelectedLevel(e.target.value)}
-            className="px-3 py-2.5 bg-surface border border-theme rounded-xl text-xs sm:text-sm text-theme-main font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0"
-          >
-            <option value="all">Tất cả cấp bậc</option>
-            {CEFR_LEVELS.map(lvl => (
-              <option key={lvl.id} value={lvl.id}>Cấp {lvl.id}</option>
-            ))}
-          </select>
+            onChange={setSelectedLevel}
+            options={levelOptions}
+            className="shrink-0"
+          />
 
           {/* Status selector */}
-          <select
+          <CustomSelect
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2.5 bg-surface border border-theme rounded-xl text-xs sm:text-sm text-theme-main font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="unmastered">❌ Chỉ từ chưa thuộc</option>
-            <option value="mastered">✅ Chỉ từ đã thuộc</option>
-          </select>
+            onChange={setSelectedStatus}
+            options={statusOptions}
+            className="shrink-0"
+          />
         </div>
 
         {/* Action icons */}
@@ -372,12 +468,18 @@ export default function FlashcardStudyPage() {
             </div>
 
             {/* Bottom hint */}
-            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center gap-1.5">
-              <span>Bấm vào thẻ hoặc nhấn</span>
-              <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">
-                Space
-              </kbd>
-              <span>để xem nghĩa</span>
+            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
+              <span className="flex items-center gap-1">
+                <span>Bấm vào thẻ hoặc</span>
+                <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">Space</kbd>
+                <span>để xem nghĩa</span>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <span>Phím</span>
+                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                <span>để nghe đọc</span>
+              </span>
             </div>
           </div>
 
@@ -430,8 +532,14 @@ export default function FlashcardStudyPage() {
             </div>
 
             {/* Bottom hint */}
-            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center gap-1">
+            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
               <span>Bấm để lật lại mặt trước</span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <span>Phím</span>
+                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                <span>nghe đọc</span>
+              </span>
             </div>
           </div>
         </div>
@@ -470,6 +578,22 @@ export default function FlashcardStudyPage() {
           Thẻ kế tiếp (→)
         </button>
       </div>
+
+      {/* Exit Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showExitConfirm}
+        title="Rời khỏi phiên học?"
+        message="Bạn đang trong phiên học từ vựng. Rời khỏi lúc này sẽ kết thúc lượt học hiện tại. Bạn có chắc chắn muốn quay về không?"
+        confirmText="Rời khỏi"
+        cancelText="Ở lại tiếp tục học"
+        type="warning"
+        onConfirm={() => {
+          window.__hasActiveStudySession = false;
+          setShowExitConfirm(false);
+          navigate('/');
+        }}
+        onClose={() => setShowExitConfirm(false)}
+      />
     </div>
   );
 }

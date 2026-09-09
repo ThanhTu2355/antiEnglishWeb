@@ -61,7 +61,7 @@ export default function DashboardPage() {
       await loadFolders();
       refreshUser?.();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message || 'Lỗi khi xóa thư mục');
     } finally {
       setIsDeleting(false);
     }

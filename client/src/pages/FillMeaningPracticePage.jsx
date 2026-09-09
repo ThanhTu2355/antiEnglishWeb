@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Award, Sparkles, CheckCircle2, XCircle, 
-  Flame, HelpCircle, ArrowRight, RotateCw
+  Flame, HelpCircle, ArrowRight, RotateCw, Folder, Layers
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import TTSButton from '../components/TTSButton';
 import ConfirmModal from '../components/ConfirmModal';
+import CustomSelect from '../components/CustomSelect';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
 
 export default function FillMeaningPracticePage() {
@@ -52,6 +53,30 @@ export default function FillMeaningPracticePage() {
   useEffect(() => {
     loadFolders();
   }, []);
+
+  // Track active study session for exit confirmation pop-up
+  useEffect(() => {
+    const isSessionActive = quizState === 'playing';
+    window.__hasActiveStudySession = isSessionActive;
+
+    if (isSessionActive) {
+      // Push history entry to intercept browser back button
+      window.history.pushState({ inPracticeSession: true }, '');
+
+      function handlePopState() {
+        window.history.pushState({ inPracticeSession: true }, '');
+        setIsQuitModalOpen(true);
+      }
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.__hasActiveStudySession = false;
+        window.removeEventListener('popstate', handlePopState);
+      };
+    } else {
+      window.__hasActiveStudySession = false;
+    }
+  }, [quizState]);
 
   async function loadFolders() {
     try {
@@ -153,7 +178,7 @@ export default function FillMeaningPracticePage() {
       ]);
     } catch (err) {
       console.error('Check error:', err);
-      alert('Lỗi kiểm tra đáp án: ' + (err.message || 'Vui lòng thử lại'));
+      setError('Lỗi kiểm tra đáp án: ' + (err.message || 'Vui lòng thử lại'));
     } finally {
       setLoading(false);
     }
@@ -201,6 +226,22 @@ export default function FillMeaningPracticePage() {
     }
   }
 
+  const folderPracticeOptions = [
+    {
+      value: 'all',
+      label: 'Tất cả thư mục từ vựng của bạn',
+      icon: Layers,
+      iconColor: 'text-purple-400'
+    },
+    ...folders.map(f => ({
+      value: f.id,
+      label: f.name,
+      icon: Folder,
+      iconColor: 'text-purple-400',
+      count: f.card_count || 0
+    }))
+  ];
+
   // --- SCREEN 1: SETUP ---
   if (quizState === 'setup') {
     return (
@@ -236,22 +277,16 @@ export default function FillMeaningPracticePage() {
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-2">
               1. Chọn thư mục từ vựng để luyện tập
             </label>
-            <select
+            <CustomSelect
               value={selectedFolderId}
-              onChange={(e) => {
-                const val = e.target.value;
+              onChange={(val) => {
                 setSelectedFolderId(val);
                 navigate(val === 'all' ? '/practice' : `/practice/${val}`);
               }}
-              className="w-full px-4 py-3 bg-surface border border-theme rounded-2xl text-theme-main text-sm font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-            >
-              <option value="all">Tất cả thư mục từ vựng của bạn</option>
-              {folders.map(f => (
-                <option key={f.id} value={f.id}>
-                  {f.name} ({f.card_count || 0} từ vựng)
-                </option>
-              ))}
-            </select>
+              options={folderPracticeOptions}
+              className="w-full"
+              size="lg"
+            />
           </div>
 
           {/* Level Filter */}
@@ -380,21 +415,21 @@ export default function FillMeaningPracticePage() {
           {/* 5. Number of Questions */}
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-2">
-              5. Số lượng câu hỏi ({limit} câu)
+              5. Số lượng câu hỏi ({limit === 'all' ? 'Tất cả câu' : `${limit} câu`})
             </label>
-            <div className="flex items-center space-x-3">
-              {[5, 10, 15, 20].map(val => (
+            <div className="grid grid-cols-5 gap-2">
+              {[5, 10, 15, 20, 'all'].map(val => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => setLimit(val)}
-                  className={`flex-1 py-2.5 rounded-xl border font-bold text-sm transition-all cursor-pointer ${
+                  className={`py-2.5 rounded-xl border font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                     limit === val
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                       : 'bg-surface border-theme text-theme-muted hover:bg-surface-hover'
                   }`}
                 >
-                  {val} câu
+                  {val === 'all' ? 'Tất cả câu' : `${val} câu`}
                 </button>
               ))}
             </div>
@@ -751,14 +786,15 @@ export default function FillMeaningPracticePage() {
       {/* Quit Confirmation Modal */}
       <ConfirmModal
         isOpen={isQuitModalOpen}
-        title="Dừng bài luyện tập?"
-        message="Tiến trình làm bài hiện tại sẽ không được lưu vào bảng điểm. Bạn có chắc muốn dừng bài tập này không?"
-        confirmText="Dừng luyện tập"
-        cancelText="Tiếp tục học"
+        title="Rời khỏi phiên học?"
+        message="Bạn đang trong phiên học từ vựng. Rời khỏi lúc này sẽ kết thúc lượt học hiện tại. Bạn có chắc chắn muốn quay về không?"
+        confirmText="Rời khỏi"
+        cancelText="Ở lại tiếp tục học"
         type="warning"
         onConfirm={() => {
+          window.__hasActiveStudySession = false;
           setIsQuitModalOpen(false);
-          setQuizState('setup');
+          navigate('/');
         }}
         onClose={() => setIsQuitModalOpen(false)}
       />

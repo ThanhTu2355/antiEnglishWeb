@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const PracticeHistory = require('../models/PracticeHistory');
@@ -63,9 +63,12 @@ router.get('/questions', async (req, res) => {
       }
     }
 
+    const isAll = limit === 'all' || Number(limit) === 0;
+    const sampleSize = isAll ? 999999 : (Math.max(1, Number(limit)) || 10);
+
     const questionCards = await Card.aggregate([
       { $match: matchFilter },
-      { $sample: { size: Number(limit) || 10 } }
+      { $sample: { size: sampleSize } }
     ]);
 
     if (questionCards.length === 0) {

@@ -7,7 +7,7 @@ export default function TTSButton({ text, lang = 'en-US', className = '', size =
   const speak = (e) => {
     e.stopPropagation();
     if (!('speechSynthesis' in window)) {
-      alert('Trình duyệt của bạn không hỗ trợ phát âm (Web Speech API)');
+      console.warn('Trình duyệt không hỗ trợ Web Speech API');
       return;
     }
 
