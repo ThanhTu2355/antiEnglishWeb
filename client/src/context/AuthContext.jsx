@@ -3,7 +3,7 @@ import { api } from '../api/client';
 
 const AuthContext = createContext(null);
 
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 phút không hoạt động
+const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 1 ngày (24 giờ)
 const LAST_ACTIVE_KEY = 'anti_english_last_active';
 const TOKEN_KEY = 'anti_english_token';
 const EXPIRED_KEY = 'anti_english_session_expired';

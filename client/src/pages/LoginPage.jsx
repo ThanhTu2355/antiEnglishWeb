@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, Lock, User, AlertCircle, Clock } from 'lucide-react';
+import { Sparkles, ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 
 export default function LoginPage() {
@@ -10,15 +10,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [sessionExpired, setSessionExpired] = useState(() => {
-    return sessionStorage.getItem('anti_english_session_expired') === '1';
-  });
-
-  useEffect(() => {
-    if (sessionExpired) {
-      sessionStorage.removeItem('anti_english_session_expired');
-    }
-  }, [sessionExpired]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -57,12 +48,6 @@ export default function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
-          {sessionExpired && (
-            <div className="p-3.5 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-fade-in">
-              <Clock className="w-5 h-5 flex-shrink-0 text-amber-400" />
-              <span>Phiên đăng nhập đã hết hạn do bạn không hoạt động hoặc đã thoát quá 30 phút. Vui lòng đăng nhập lại.</span>
-            </div>
-          )}
 
           {error && (
             <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold flex items-center gap-2">
