@@ -294,7 +294,7 @@ export default function FillMeaningPracticePage() {
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-2">
               2. Lọc theo Cấp bậc CEFR
             </label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedLevel('all')}
@@ -616,7 +616,7 @@ export default function FillMeaningPracticePage() {
             </div>
             {currentQ.level && (
               <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentQ.level).badgeClass}`}>
-                {currentQ.level}
+                {getLevelBadge(currentQ.level).name}
               </span>
             )}
           </div>

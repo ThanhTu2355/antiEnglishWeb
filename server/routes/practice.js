@@ -52,7 +52,12 @@ router.get('/questions', async (req, res) => {
     }
 
     if (level && level !== 'all') {
-      matchFilter.level = level;
+      const norm = level.trim().toUpperCase();
+      if (norm === 'OTHER') {
+        matchFilter.level = { $in: ['OTHER', 'Other'] };
+      } else {
+        matchFilter.level = norm;
+      }
     }
 
     if (status && status !== 'all') {

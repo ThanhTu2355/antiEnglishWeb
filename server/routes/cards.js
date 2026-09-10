@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const Folder = require('../models/Folder');
@@ -28,7 +28,12 @@ router.get('/', async (req, res) => {
     }
 
     if (level && level !== 'all') {
-      filter.level = level;
+      const norm = level.trim().toUpperCase();
+      if (norm === 'OTHER') {
+        filter.level = { $in: ['OTHER', 'Other'] };
+      } else {
+        filter.level = norm;
+      }
     }
 
     if (search && search.trim()) {
@@ -107,7 +112,7 @@ router.post('/', async (req, res) => {
       phonetic: phonetic.trim(),
       meaning: meaning.trim(),
       part_of_speech: part_of_speech.trim(),
-      level: (level || 'B1').trim().toUpperCase(),
+      level: (level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (level || 'B1').trim().toUpperCase(),
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim(),
@@ -151,7 +156,7 @@ router.post('/bulk', async (req, res) => {
         phonetic: (c.phonetic || '').trim(),
         meaning: c.meaning.trim(),
         part_of_speech: (c.part_of_speech || 'noun').trim(),
-        level: (c.level || default_level || 'B1').trim().toUpperCase(),
+        level: (c.level || default_level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (c.level || default_level || 'B1').trim().toUpperCase(),
         example_en: (c.example_en || '').trim(),
         example_vi: (c.example_vi || '').trim(),
         note: (c.note || '').trim(),
@@ -205,7 +210,7 @@ router.put('/:id', async (req, res) => {
       phonetic: phonetic.trim(),
       meaning: meaning.trim(),
       part_of_speech: part_of_speech.trim(),
-      level: (level || 'B1').trim().toUpperCase(),
+      level: (level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (level || 'B1').trim().toUpperCase(),
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim()

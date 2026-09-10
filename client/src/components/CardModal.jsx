@@ -13,6 +13,8 @@ const SAMPLE_WORDS = [
   { word: 'ubiquitous', phonetic: '/juːˈbɪk.wɪ.təs/', meaning: 'có mặt ở khắp nơi, phổ biến', pos: 'adjective', level: 'C2', en: 'Smartphones have become ubiquitous in daily life.', vi: 'Điện thoại thông minh đã trở nên phổ biến khắp nơi trong đời sống.', n: 'Đồng nghĩa: omnipresent' },
   { word: 'curiosity', phonetic: '/ˌkjʊr.iˈɑː.sə.t̬i/', meaning: 'sự tò mò, lòng hiếu kỳ', pos: 'noun', level: 'B1', en: 'Children have a natural curiosity about the world.', vi: 'Trẻ em có tính tò mò tự nhiên về thế giới xung quanh.', n: 'Tính từ: curious' },
   { word: 'essential', phonetic: '/ɪˈsen.ʃəl/', meaning: 'thiết yếu, cực kỳ quan trọng', pos: 'adjective', level: 'A2', en: 'Water is essential for all living beings.', vi: 'Nước là thiết yếu cho mọi sinh vật sống.', n: 'Đồng nghĩa: vital, crucial' },
+  { word: 'algorithm', phonetic: '/ˈæl.ɡə.rɪ.ðəm/', meaning: 'thuật toán, quy trình giải quyết vấn đề từng bước', pos: 'noun', level: 'Other', en: 'A search engine uses a complex algorithm to rank web pages.', vi: 'Một công cụ tìm kiếm sử dụng một thuật toán phức tạp để xếp hạng các trang web.', n: 'Thuật ngữ tin học / chuyên ngành kỹ thuật' },
+  { word: 'photosynthesis', phonetic: '/ˌfoʊ.toʊˈsɪn.θə.sɪs/', meaning: 'quang hợp (quá trình tổng hợp chất hữu cơ nhờ ánh sáng)', pos: 'noun', level: 'Other', en: 'Green plants use photosynthesis to produce energy.', vi: 'Cây xanh dùng quá trình quang hợp để tạo ra năng lượng.', n: 'Thuật ngữ sinh học / chuyên ngành' },
 ];
 
 export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSaved }) {
@@ -52,7 +54,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
 
   const cefrOptions = CEFR_LEVELS.map(lvl => ({
     value: lvl.id,
-    label: lvl.id,
+    label: lvl.id === 'Other' ? 'Other - Khác' : lvl.id,
     badge: lvl.id,
     badgeClass: lvl.badgeClass
   }));

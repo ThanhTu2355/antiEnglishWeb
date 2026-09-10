@@ -38,7 +38,7 @@ export default function CustomSelect({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  const selectedOption = options.find(opt => String(opt.value) === String(value));
+  const selectedOption = options.find(opt => String(opt.value) === String(value) || String(opt.value).toLowerCase() === String(value).toLowerCase());
 
   const sizeClasses = {
     sm: 'px-2.5 py-1.5 text-xs rounded-xl',
@@ -92,7 +92,7 @@ export default function CustomSelect({
         >
           <div className="space-y-0.5">
             {options.map((option) => {
-              const isSelected = String(option.value) === String(value);
+              const isSelected = String(option.value) === String(value) || String(option.value).toLowerCase() === String(value).toLowerCase();
               const Icon = option.icon;
 
               return (

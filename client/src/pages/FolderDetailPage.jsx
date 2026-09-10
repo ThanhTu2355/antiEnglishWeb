@@ -96,7 +96,7 @@ export default function FolderDetailPage() {
     const matchesStatus = 
       statusFilter === 'all' || 
       (statusFilter === 'unmastered' ? c.status !== 'mastered' : c.status === statusFilter);
-    const matchesLevel = levelFilter === 'all' || (c.level || 'B1') === levelFilter;
+    const matchesLevel = levelFilter === 'all' || (c.level || 'B1').trim().toUpperCase() === levelFilter.trim().toUpperCase();
     return matchesSearch && matchesStatus && matchesLevel;
   });
 
@@ -166,8 +166,8 @@ export default function FolderDetailPage() {
     },
     ...CEFR_LEVELS.map(lvl => ({
       value: lvl.id,
-      label: `Cấp ${lvl.id}`,
-      count: cards.filter(c => (c.level || 'B1') === lvl.id).length,
+      label: lvl.id === 'Other' ? 'Other (Khác)' : `Cấp ${lvl.id}`,
+      count: cards.filter(c => (c.level || 'B1').trim().toUpperCase() === lvl.id.trim().toUpperCase()).length,
       badge: lvl.id,
       badgeClass: lvl.badgeClass
     }))
@@ -347,7 +347,7 @@ export default function FolderDetailPage() {
                     <div className="flex items-center space-x-2">
                       <TTSButton text={card.word} size={16} className="p-1.5" />
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border ${getLevelBadge(card.level).badgeClass}`}>
-                        {card.level || 'B1'}
+                        {getLevelBadge(card.level).name}
                       </span>
                       <span className="text-xs px-2.5 py-0.5 rounded-lg bg-tag-theme text-theme-muted font-semibold border border-theme-subtle">
                         {card.part_of_speech || 'noun'}

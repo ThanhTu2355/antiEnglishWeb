@@ -334,7 +334,7 @@ export default function FlashcardStudyPage() {
     },
     ...CEFR_LEVELS.map(lvl => ({
       value: lvl.id,
-      label: `Cấp ${lvl.id}`,
+      label: lvl.id === 'Other' ? 'Other (Khác)' : `Cấp ${lvl.id}`,
       badge: lvl.id,
       badgeClass: lvl.badgeClass
     }))
@@ -443,7 +443,7 @@ export default function FlashcardStudyPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
-                  {currentCard.level || 'B1'}
+                  {getLevelBadge(currentCard.level).name}
                 </span>
                 <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
                   {currentCard.part_of_speech || 'Từ vựng'}
@@ -489,7 +489,7 @@ export default function FlashcardStudyPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
-                  {currentCard.level || 'B1'}
+                  {getLevelBadge(currentCard.level).name}
                 </span>
                 <span className="text-base font-extrabold text-theme-main">{currentCard.word}</span>
                 {currentCard.phonetic && (

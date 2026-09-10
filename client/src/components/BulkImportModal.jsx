@@ -41,7 +41,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
 
   // Parsing lines: word | meaning | example (optional) | level (optional)
   const parseLines = (text) => {
-    const validLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const validLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'OTHER'];
     return text
       .split('\n')
       .map(line => line.trim())
@@ -57,13 +57,13 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
           if (parts[3]) {
             const rawLvl = parts[3].toUpperCase();
             if (validLevels.includes(rawLvl)) {
-              level = rawLvl;
+              level = rawLvl === 'OTHER' ? 'Other' : rawLvl;
             }
           }
         } else if (parts.length === 3) {
           const rawLvl = parts[2].toUpperCase();
           if (validLevels.includes(rawLvl)) {
-            level = rawLvl;
+            level = rawLvl === 'OTHER' ? 'Other' : rawLvl;
             example_en = '';
           }
         }
