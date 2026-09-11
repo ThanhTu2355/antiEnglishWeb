@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, BookPlus, Sparkles } from 'lucide-react';
 import { api } from '../api/client';
 import TTSButton from './TTSButton';
@@ -17,7 +18,9 @@ const SAMPLE_WORDS = [
   { word: 'photosynthesis', phonetic: '/ˌfoʊ.toʊˈsɪn.θə.sɪs/', meaning: 'quang hợp (quá trình tổng hợp chất hữu cơ nhờ ánh sáng)', pos: 'noun', level: 'Other', en: 'Green plants use photosynthesis to produce energy.', vi: 'Cây xanh dùng quá trình quang hợp để tạo ra năng lượng.', n: 'Thuật ngữ sinh học / chuyên ngành' },
 ];
 
-export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSaved }) {
+export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSaved, availableFolders = [] }) {
+  const [folders, setFolders] = useState(availableFolders);
+  const [selectedFolderId, setSelectedFolderId] = useState(folderId && folderId !== 'all' ? folderId : '');
   const [word, setWord] = useState('');
   const [phonetic, setPhonetic] = useState('');
   const [meaning, setMeaning] = useState('');
@@ -30,6 +33,19 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (availableFolders && availableFolders.length > 0) {
+      setFolders(availableFolders);
+    } else if (isOpen && (folderId === 'all' || !folderId)) {
+      api.folders.getAll().then(data => {
+        setFolders(data || []);
+        if (data && data.length > 0 && !selectedFolderId) {
+          setSelectedFolderId(data[0].id);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen, availableFolders, folderId]);
+
+  useEffect(() => {
     if (cardToEdit) {
       setWord(cardToEdit.word || '');
       setPhonetic(cardToEdit.phonetic || '');
@@ -39,6 +55,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setExampleEn(cardToEdit.example_en || '');
       setExampleVi(cardToEdit.example_vi || '');
       setNote(cardToEdit.note || '');
+      setSelectedFolderId(cardToEdit.folder_id || '');
     } else {
       setWord('');
       setPhonetic('');
@@ -48,9 +65,14 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setExampleEn('');
       setExampleVi('');
       setNote('');
+      if (folderId && folderId !== 'all') {
+        setSelectedFolderId(folderId);
+      } else if (folders.length > 0) {
+        setSelectedFolderId(folders[0].id);
+      }
     }
     setError('');
-  }, [cardToEdit, isOpen]);
+  }, [cardToEdit, isOpen, folderId, folders]);
 
   const cefrOptions = CEFR_LEVELS.map(lvl => ({
     value: lvl.id,
@@ -82,8 +104,14 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setLoading(true);
       setError('');
 
+      const finalFolderId = (folderId && folderId !== 'all') ? folderId : (cardToEdit?.folder_id || selectedFolderId);
+      if (!finalFolderId) {
+        setError('Vui lòng chọn thư mục để lưu từ vựng');
+        return;
+      }
+
       const payload = {
-        folder_id: folderId || cardToEdit?.folder_id,
+        folder_id: finalFolderId,
         word: word.trim(),
         phonetic: phonetic.trim(),
         meaning: meaning.trim(),
@@ -93,6 +121,10 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
         example_vi: exampleVi.trim(),
         note: note.trim(),
       };
+
+      if (cardToEdit?.status) {
+        payload.status = cardToEdit.status;
+      }
 
       if (cardToEdit) {
         await api.cards.update(cardToEdit.id || cardToEdit._id, payload);
@@ -121,13 +153,15 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
     setNote(pick.n);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-lg bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
+  if (!isOpen) return null;
+
+  const modalNode = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme bg-surface">
           <div className="flex items-center space-x-2">
-            <BookPlus className="w-5 h-5 text-indigo-400" />
+            <BookPlus className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <h3 className="text-lg font-bold text-theme-main">
               {cardToEdit ? 'Chỉnh sửa thẻ từ vựng' : 'Thêm thẻ từ vựng mới'}
             </h3>
@@ -138,9 +172,9 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 type="button"
                 onClick={fillSample}
                 title="Tự động điền thử từ mẫu"
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25 border border-indigo-500/30 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/25 border border-indigo-500/30 font-bold flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Điền thử mẫu</span>
               </button>
             )}
@@ -156,8 +190,23 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold">
               {error}
+            </div>
+          )}
+
+          {/* Target Folder Selector (when adding from All-Words folder) */}
+          {(!folderId || folderId === 'all') && !cardToEdit && (
+            <div>
+              <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
+                Lưu vào thư mục <span className="text-rose-600 dark:text-rose-400">*</span>
+              </label>
+              <CustomSelect
+                value={selectedFolderId}
+                onChange={setSelectedFolderId}
+                options={folders.map(f => ({ value: f.id, label: f.name }))}
+                className="w-full"
+              />
             </div>
           )}
 
@@ -165,7 +214,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-                Từ vựng tiếng Anh <span className="text-rose-400">*</span>
+                Từ vựng tiếng Anh <span className="text-rose-600 dark:text-rose-400">*</span>
               </label>
               <div className="relative">
                 <input
@@ -178,7 +227,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 />
                 {word.trim() && (
                   <div className="absolute right-2 top-2">
-                    <TTSButton text={word} size={14} className="p-1 text-theme-subtle hover:text-indigo-400" />
+                    <TTSButton text={word} size={14} className="p-1 text-theme-subtle hover:text-indigo-600 dark:hover:text-indigo-400" />
                   </div>
                 )}
               </div>
@@ -198,46 +247,45 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
             </div>
           </div>
 
-          {/* Meaning, Level & Part of speech */}
+          {/* Meaning tiếng Việt */}
+          <div>
+            <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
+              Nghĩa tiếng Việt <span className="text-rose-600 dark:text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={meaning}
+              onChange={(e) => setMeaning(e.target.value)}
+              placeholder="hiểu, lĩnh hội sâu sắc"
+              className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Level & Part of speech */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-                Nghĩa tiếng Việt <span className="text-rose-400">*</span>
+                Cấp bậc CEFR
               </label>
-              <input
-                type="text"
-                required
-                value={meaning}
-                onChange={(e) => setMeaning(e.target.value)}
-                placeholder="hiểu, lĩnh hội sâu sắc"
-                className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              <CustomSelect
+                value={level}
+                onChange={setLevel}
+                options={cefrOptions}
+                className="w-full"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-                  Cấp bậc CEFR
-                </label>
-                <CustomSelect
-                  value={level}
-                  onChange={setLevel}
-                  options={cefrOptions}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-                  Loại từ
-                </label>
-                <CustomSelect
-                  value={partOfSpeech}
-                  onChange={setPartOfSpeech}
-                  options={posOptions}
-                  className="w-full"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
+                Loại từ
+              </label>
+              <CustomSelect
+                value={partOfSpeech}
+                onChange={setPartOfSpeech}
+                options={posOptions}
+                className="w-full"
+              />
             </div>
           </div>
 
@@ -304,4 +352,6 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }

@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Folder } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -65,13 +66,15 @@ export default function FolderModal({ isOpen, onClose, folderToEdit, onSaved }) 
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-md bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden">
+  if (!isOpen) return null;
+
+  const modalNode = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-md bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme bg-surface">
           <h3 className="text-lg font-bold text-theme-main flex items-center gap-2">
-            <Folder className="w-5 h-5 text-indigo-400" />
+            <Folder className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             {folderToEdit ? 'Chỉnh sửa thư mục' : 'Tạo thư mục từ vựng mới'}
           </h3>
           <button
@@ -85,14 +88,14 @@ export default function FolderModal({ isOpen, onClose, folderToEdit, onSaved }) 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold">
               {error}
             </div>
           )}
 
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1.5">
-              Tên thư mục <span className="text-rose-400">*</span>
+              Tên thư mục <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <input
               type="text"
@@ -158,4 +161,6 @@ export default function FolderModal({ isOpen, onClose, folderToEdit, onSaved }) 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }

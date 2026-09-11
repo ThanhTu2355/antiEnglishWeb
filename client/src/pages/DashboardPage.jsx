@@ -74,7 +74,11 @@ export default function DashboardPage() {
 
   const totalWords = folders.reduce((sum, f) => sum + (f.card_count || 0), 0);
   const masteredWords = folders.reduce((sum, f) => sum + (f.mastered_count || 0), 0);
+  const learningWords = folders.reduce((sum, f) => sum + (f.learning_count || 0), 0);
+  const unmasteredWords = folders.reduce((sum, f) => sum + (f.unmastered_count !== undefined ? f.unmastered_count : ((f.card_count || 0) - (f.mastered_count || 0))), 0);
   const masteryPercentage = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
+
+  const matchesAllFolder = !search || 'tất cả từ vựng kho tổng hợp'.includes(search.toLowerCase()) || 'all'.includes(search.toLowerCase());
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in transition-colors duration-200">
@@ -104,37 +108,37 @@ export default function DashboardPage() {
 
           {/* Quick Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full xl:w-auto shrink-0">
-            <div className="bg-black/20 backdrop-blur-sm border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
-              <span className="text-xs text-indigo-200 font-medium block">Thư mục</span>
-              <span className="text-2xl font-extrabold text-white mt-1 block">{folders.length}</span>
+            <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
+              <span className="text-xs text-indigo-100 font-semibold block">Thư mục</span>
+              <span className="text-2xl font-black text-white mt-1 block">{folders.length}</span>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
-              <span className="text-xs text-indigo-200 font-medium block">Tổng từ</span>
-              <span className="text-2xl font-extrabold text-amber-300 mt-1 block">{totalWords}</span>
+            <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
+              <span className="text-xs text-amber-200 font-semibold block">Tổng từ</span>
+              <span className="text-2xl font-black text-amber-300 mt-1 block">{totalWords}</span>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
-              <span className="text-xs text-rose-200 font-medium block">Chưa thuộc</span>
-              <span className="text-2xl font-extrabold text-rose-300 mt-1 block">{totalWords - masteredWords}</span>
+            <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
+              <span className="text-xs text-rose-200 font-semibold block">Chưa thuộc</span>
+              <span className="text-2xl font-black text-rose-200 mt-1 block">{totalWords - masteredWords}</span>
             </div>
 
-            <div className="bg-black/20 backdrop-blur-sm border border-white/15 rounded-2xl p-3 sm:p-4 text-center">
-              <span className="text-xs text-emerald-200 font-medium block">Đã thuộc</span>
-              <span className="text-2xl font-extrabold text-emerald-400 mt-1 block">{masteryPercentage}%</span>
+            <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
+              <span className="text-xs text-emerald-200 font-semibold block">Đã thuộc</span>
+              <span className="text-2xl font-black text-emerald-300 mt-1 block">{masteryPercentage}%</span>
             </div>
           </div>
         </div>
 
         {/* Global Mastery progress bar */}
-        <div className="mt-6 pt-5 border-t border-white/15 flex items-center gap-4">
-          <div className="flex-1 bg-black/25 rounded-full h-2.5 overflow-hidden">
+        <div className="mt-6 pt-5 border-t border-white/20 flex items-center gap-4">
+          <div className="flex-1 bg-white/20 rounded-full h-2.5 overflow-hidden border border-white/15">
             <div 
               className="bg-emerald-400 h-full rounded-full transition-all duration-500" 
               style={{ width: `${masteryPercentage}%` }}
             />
           </div>
-          <span className="text-xs font-semibold text-white whitespace-nowrap">
+          <span className="text-xs font-bold text-white whitespace-nowrap">
             {masteredWords} / {totalWords} từ vựng đã nắm vững
           </span>
         </div>
@@ -183,12 +187,12 @@ export default function DashboardPage() {
 
       {/* Folders Grid */}
       {loading ? (
-        <div className="py-20 text-center text-theme-subtle">
+        <div key="loading-container" className="py-20 text-center text-theme-subtle">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="font-medium">Đang tải danh sách thư mục...</p>
         </div>
       ) : filteredFolders.length === 0 ? (
-        <div className="text-center py-16 bg-surface border border-theme rounded-3xl p-8 shadow-xs">
+        <div key="empty-container" className="text-center py-16 bg-surface border border-theme rounded-3xl p-8 shadow-xs">
           <Layers className="w-12 h-12 text-theme-subtle mx-auto mb-3" />
           <h3 className="text-lg font-bold text-theme-main">Chưa có thư mục nào</h3>
           <p className="text-sm text-theme-muted max-w-md mx-auto mt-1 mb-6">
@@ -206,7 +210,79 @@ export default function DashboardPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div key="grid-container" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Smart Folder: Tất cả từ vựng */}
+          {matchesAllFolder && (
+            <div
+              key="all-words-smart-folder"
+              onClick={() => navigate('/folders/all')}
+              className="group relative bg-surface border-2 border-indigo-500/60 hover:border-indigo-600 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/25 rounded-3xl p-6 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-1 hover:shadow-xl shadow-xs cursor-pointer flex flex-col justify-between"
+            >
+              <div>
+                {/* Top row */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-theme-main text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        Tất cả từ vựng
+                      </h3>
+                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">
+                        {totalWords} từ • {folders.length} thư mục
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="px-2.5 py-1 text-[11px] font-extrabold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 rounded-full shrink-0">
+                    Kho tổng
+                  </span>
+                </div>
+
+                {/* Description */}
+                <p className="text-xs text-theme-muted line-clamp-2 min-h-[32px] mb-4">
+                  Thư mục tổng hợp tự động đồng bộ toàn bộ từ vựng từ tất cả các thư mục của bạn.
+                </p>
+
+                {/* Mastery mini progress */}
+                <div className="space-y-1.5 mb-6">
+                  <div className="flex justify-between text-[11px] text-theme-subtle font-medium">
+                    <span>Độ thành thạo ({masteredWords}/{totalWords})</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{masteryPercentage}%</span>
+                  </div>
+                  <div className="w-full bg-tag-theme rounded-full h-2 overflow-hidden border border-theme-subtle">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${masteryPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Quick Actions */}
+              <div className="grid grid-cols-2 gap-2 pt-4 border-t border-theme-subtle" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => navigate('/flashcards')}
+                  disabled={totalWords === 0}
+                  className="py-2.5 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center space-x-1.5 border border-indigo-500/30 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Học Flashcard</span>
+                </button>
+
+                <button
+                  onClick={() => navigate('/practice')}
+                  disabled={totalWords === 0}
+                  className="py-2.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold text-xs flex items-center justify-center space-x-1.5 border border-purple-500/30 transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>Điền nghĩa</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {filteredFolders.map(folder => {
             const cardCount = folder.card_count || 0;
             const mastered = folder.mastered_count || 0;
@@ -217,17 +293,17 @@ export default function DashboardPage() {
               <div
                 key={folder.id}
                 onClick={() => navigate(`/folders/${folder.id}`)}
-                className="group relative bg-surface border border-theme hover:border-indigo-500/60 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col justify-between"
+                className="group relative bg-surface border border-theme hover:border-indigo-500/60 rounded-3xl p-6 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col justify-between"
               >
                 <div>
                   {/* Top row */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                         <Layers className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-theme-main text-base group-hover:text-indigo-400 transition-colors line-clamp-1">
+                        <h3 className="font-bold text-theme-main text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                           {folder.name}
                         </h3>
                         <span className="text-xs text-theme-subtle font-medium">
@@ -244,14 +320,14 @@ export default function DashboardPage() {
                           setIsFolderModalOpen(true);
                         }}
                         title="Chỉnh sửa thư mục"
-                        className="p-1.5 text-theme-subtle hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-theme-subtle hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={(e) => handleDeleteFolderClick(e, folder)}
                         title="Xóa thư mục"
-                        className="p-1.5 text-theme-subtle hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-theme-subtle hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -267,9 +343,9 @@ export default function DashboardPage() {
                   <div className="space-y-1.5 mb-6">
                     <div className="flex justify-between text-[11px] text-theme-subtle font-medium">
                       <span>Độ thành thạo ({mastered}/{cardCount})</span>
-                      <span className="text-emerald-400 font-bold">{percent}%</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{percent}%</span>
                     </div>
-                    <div className="w-full bg-input-theme rounded-full h-2 overflow-hidden border border-theme-subtle">
+                    <div className="w-full bg-tag-theme rounded-full h-2 overflow-hidden border border-theme-subtle">
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${percent}%` }}
@@ -283,7 +359,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => navigate(`/flashcards/${folder.id}`)}
                     disabled={cardCount === 0}
-                    className="py-2.5 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                    className="py-2.5 px-3 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                   >
                     <BookOpen className="w-3.5 h-3.5" />
                     <span>Học Flashcard</span>
@@ -292,7 +368,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => navigate(`/practice/${folder.id}`)}
                     disabled={cardCount === 0}
-                    className="py-2.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                    className="py-2.5 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
                   >
                     <Award className="w-3.5 h-3.5" />
                     <span>Điền nghĩa</span>

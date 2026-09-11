@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, Lock, User, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
@@ -59,7 +59,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-3.5">
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold flex items-center gap-2">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -83,7 +83,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-              Tên đăng nhập <span className="text-rose-400">*</span>
+              Tên đăng nhập <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
@@ -100,7 +100,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-              Địa chỉ Email <span className="text-rose-400">*</span>
+              Địa chỉ Email <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
@@ -117,7 +117,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-              Mật khẩu <span className="text-rose-400">*</span>
+              Mật khẩu <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
@@ -134,7 +134,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-              Xác nhận mật khẩu <span className="text-rose-400">*</span>
+              Xác nhận mật khẩu <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
@@ -161,7 +161,7 @@ export default function RegisterPage() {
 
         <div className="mt-6 text-center text-xs text-theme-subtle">
           Đã có tài khoản?{' '}
-          <Link to="/login" className="font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+          <Link to="/login" className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
             Đăng nhập ngay
           </Link>
         </div>

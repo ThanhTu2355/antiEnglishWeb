@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, UploadCloud, BookOpen, Award, 
-  Search, Edit3, Trash2, CheckCircle2, Layers, XCircle, Clock, Sparkles 
+  Search, Edit3, Trash2, CheckCircle2, Layers, XCircle, Clock, Sparkles, Folder
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
@@ -20,6 +20,7 @@ export default function FolderDetailPage() {
 
   const [folder, setFolder] = useState(null);
   const [cards, setCards] = useState([]);
+  const [allFolders, setAllFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -40,12 +41,17 @@ export default function FolderDetailPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [fData, cData] = await Promise.all([
+      const promises = [
         api.folders.getById(folderId),
         api.cards.getAll({ folder_id: folderId })
-      ]);
+      ];
+      if (folderId === 'all') {
+        promises.push(api.folders.getAll());
+      }
+      const [fData, cData, foldersList] = await Promise.all(promises);
       setFolder(fData);
       setCards(cData);
+      if (foldersList) setAllFolders(foldersList);
     } catch (err) {
       console.error('Failed to load folder details:', err);
     } finally {
@@ -79,7 +85,11 @@ export default function FolderDetailPage() {
   }
 
   async function handleToggleStatus(card) {
-    const nextStatus = card.status === 'mastered' ? 'new' : card.status === 'learning' ? 'mastered' : 'learning';
+    const nextStatus = 
+      card.status === 'new' ? 'learning' : 
+      card.status === 'learning' ? 'unmastered' : 
+      card.status === 'unmastered' ? 'mastered' : 
+      'new';
     try {
       await api.cards.updateStatus(card.id, nextStatus);
       setCards(prev => prev.map(c => c.id === card.id ? { ...c, status: nextStatus } : c));
@@ -93,9 +103,7 @@ export default function FolderDetailPage() {
     const matchesSearch = 
       c.word.toLowerCase().includes(search.toLowerCase()) ||
       c.meaning.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      (statusFilter === 'unmastered' ? c.status !== 'mastered' : c.status === statusFilter);
+    const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     const matchesLevel = levelFilter === 'all' || (c.level || 'B1').trim().toUpperCase() === levelFilter.trim().toUpperCase();
     return matchesSearch && matchesStatus && matchesLevel;
   });
@@ -124,35 +132,35 @@ export default function FolderDetailPage() {
       label: 'Tất cả trạng thái',
       count: cards.length,
       icon: Layers,
-      iconColor: 'text-indigo-400'
-    },
-    {
-      value: 'unmastered',
-      label: 'Chưa thuộc',
-      count: cards.filter(c => c.status !== 'mastered').length,
-      icon: XCircle,
-      iconColor: 'text-rose-400'
-    },
-    {
-      value: 'mastered',
-      label: 'Đã thuộc',
-      count: cards.filter(c => c.status === 'mastered').length,
-      icon: CheckCircle2,
-      iconColor: 'text-emerald-400'
-    },
-    {
-      value: 'learning',
-      label: 'Đang học',
-      count: cards.filter(c => c.status === 'learning').length,
-      icon: Clock,
-      iconColor: 'text-amber-400'
+      iconColor: 'text-indigo-600 dark:text-indigo-400'
     },
     {
       value: 'new',
       label: 'Từ mới',
       count: cards.filter(c => c.status === 'new').length,
       icon: Sparkles,
-      iconColor: 'text-sky-400'
+      iconColor: 'text-sky-600 dark:text-sky-400'
+    },
+    {
+      value: 'learning',
+      label: 'Đang học',
+      count: cards.filter(c => c.status === 'learning').length,
+      icon: Clock,
+      iconColor: 'text-amber-600 dark:text-amber-400'
+    },
+    {
+      value: 'unmastered',
+      label: 'Chưa thuộc',
+      count: cards.filter(c => c.status === 'unmastered').length,
+      icon: XCircle,
+      iconColor: 'text-rose-600 dark:text-rose-400'
+    },
+    {
+      value: 'mastered',
+      label: 'Đã thuộc',
+      count: cards.filter(c => c.status === 'mastered').length,
+      icon: CheckCircle2,
+      iconColor: 'text-emerald-600 dark:text-emerald-400'
     }
   ];
 
@@ -193,49 +201,98 @@ export default function FolderDetailPage() {
         </button>
         <span>/</span>
         <span className="text-theme-main font-bold truncate max-w-xs">{folder.name}</span>
+        {(folder.is_all_folder || folderId === 'all') && (
+          <span className="px-2.5 py-0.5 text-[11px] font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 rounded-full">
+            Kho tổng
+          </span>
+        )}
       </div>
 
       {/* Header Banner */}
       <div className="bg-surface border border-theme rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="space-y-2 flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-theme-main break-words mr-1">{folder.name}</h1>
-            <span className="px-3 py-1 bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 text-xs font-bold rounded-full shrink-0 whitespace-nowrap">
+        <div className="space-y-3 flex-1 min-w-0">
+          {/* Dòng 1: Tên thư mục & số lượng */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-theme-main tracking-tight break-words">
+              {folder.name}
+            </h1>
+            <span className="px-3 py-1 bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 text-xs font-bold rounded-full shrink-0 whitespace-nowrap">
               {cards.length} từ vựng
             </span>
+            {(folder.is_all_folder || folderId === 'all') && (
+              <span className="px-2.5 py-0.5 text-[11px] font-extrabold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40 rounded-full shrink-0">
+                Kho tổng
+              </span>
+            )}
+          </div>
+
+          {/* Mô tả thư mục (nếu có) */}
+          {folder.description && (
+            <p className="text-sm text-theme-muted max-w-2xl leading-relaxed">
+              {folder.description}
+            </p>
+          )}
+
+          {/* Dòng 2: Các trạng thái từ */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'new' ? 'all' : 'new')}
+              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                statusFilter === 'new'
+                  ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
+                  : 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30 hover:bg-sky-500/25'
+              }`}
+              title="Bấm để lọc Từ mới"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Từ mới: {cards.filter(c => c.status === 'new').length}</span>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'learning' ? 'all' : 'learning')}
+              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                statusFilter === 'learning'
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+              title="Bấm để lọc từ Đang học"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Đang học: {cards.filter(c => c.status === 'learning').length}</span>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'unmastered' ? 'all' : 'unmastered')}
+              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                statusFilter === 'unmastered'
+                  ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
+                  : 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
+              }`}
+              title="Bấm để lọc từ Chưa thuộc"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Chưa thuộc: {cards.filter(c => c.status === 'unmastered').length}</span>
+            </button>
+
             <button
               onClick={() => setStatusFilter(statusFilter === 'mastered' ? 'all' : 'mastered')}
               className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 statusFilter === 'mastered'
                   ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
-                  : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
               }`}
               title="Bấm để lọc từ Đã thuộc"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Đã thuộc: {cards.filter(c => c.status === 'mastered').length}</span>
             </button>
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'unmastered' ? 'all' : 'unmastered')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'unmastered'
-                  ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
-                  : 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
-              }`}
-              title="Bấm để lọc từ Chưa thuộc"
-            >
-              <span>❌ Chưa thuộc: {cards.filter(c => c.status !== 'mastered').length}</span>
-            </button>
           </div>
-          <p className="text-sm text-theme-muted max-w-2xl">
-            {folder.description || 'Chưa có mô tả cho thư mục này.'}
-          </p>
         </div>
 
         {/* Study Action Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto shrink-0">
           <button
-            onClick={() => navigate(`/flashcards/${folder.id}`)}
+            onClick={() => navigate((folder.is_all_folder || folderId === 'all') ? '/flashcards' : `/flashcards/${folder.id}`)}
             disabled={cards.length === 0}
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
@@ -244,7 +301,7 @@ export default function FolderDetailPage() {
           </button>
 
           <button
-            onClick={() => navigate(`/practice/${folder.id}`)}
+            onClick={() => navigate((folder.is_all_folder || folderId === 'all') ? '/practice' : `/practice/${folder.id}`)}
             disabled={cards.length === 0}
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm shadow-md shadow-purple-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
@@ -292,7 +349,7 @@ export default function FolderDetailPage() {
             onClick={() => setIsBulkModalOpen(true)}
             className="px-4 py-2.5 bg-surface hover:bg-surface-hover text-theme-muted font-semibold text-sm rounded-2xl border border-theme shadow-xs flex items-center space-x-2 transition-colors cursor-pointer whitespace-nowrap"
           >
-            <UploadCloud className="w-4 h-4 text-indigo-400 shrink-0" />
+            <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <span>Nhập hàng loạt</span>
           </button>
 
@@ -332,9 +389,10 @@ export default function FolderDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredCards.map(card => {
             const statusConfig = 
-              card.status === 'mastered' ? { label: 'Đã thuộc', bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' } :
-              card.status === 'learning' ? { label: 'Chưa thuộc', bg: 'bg-rose-500/15 text-rose-400 border-rose-500/30' } :
-              { label: 'Từ mới', bg: 'bg-tag-theme text-theme-subtle border-theme-subtle' };
+              card.status === 'mastered' ? { label: 'Đã thuộc', bg: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' } :
+              card.status === 'learning' ? { label: 'Đang học', bg: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' } :
+              card.status === 'unmastered' ? { label: 'Chưa thuộc', bg: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' } :
+              { label: 'Từ mới', bg: 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30' };
 
             return (
               <div
@@ -343,21 +401,35 @@ export default function FolderDetailPage() {
               >
                 <div>
                   {/* Top card bar */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <TTSButton text={card.word} size={16} className="p-1.5" />
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg border ${getLevelBadge(card.level).badgeClass}`}>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+                      <TTSButton text={card.word} size={13} className="w-6 h-6 shrink-0" />
+                      <span className={`inline-flex items-center justify-center h-6 px-2 text-[11px] font-bold rounded-lg border leading-none shrink-0 ${getLevelBadge(card.level).badgeClass}`}>
                         {getLevelBadge(card.level).name}
                       </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-lg bg-tag-theme text-theme-muted font-semibold border border-theme-subtle">
+                      <span className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-tag-theme text-theme-muted border border-theme-subtle leading-none shrink-0">
                         {card.part_of_speech || 'noun'}
                       </span>
+                      {(folder.is_all_folder || folderId === 'all') && card.folder_name && (
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const targetFId = typeof card.folder_id === 'object' ? (card.folder_id?.id || card.folder_id?._id) : card.folder_id;
+                            if (targetFId) navigate(`/folders/${targetFId}`);
+                          }}
+                          title={`Thuộc thư mục: ${card.folder_name} (Bấm để xem thư mục này)`}
+                          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors cursor-pointer gap-1 shrink-0 leading-none"
+                        >
+                          <Folder className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[120px]">{card.folder_name}</span>
+                        </span>
+                      )}
                     </div>
 
                     <button
                       onClick={() => handleToggleStatus(card)}
-                      title="Bấm để đổi trạng thái học"
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${statusConfig.bg}`}
+                      title="Bấm để chuyển trạng thái: Từ mới ➔ Đang học ➔ Chưa thuộc ➔ Đã thuộc"
+                      className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border transition-all duration-150 cursor-pointer shrink-0 leading-none whitespace-nowrap hover:brightness-110 hover:scale-105 active:scale-95 shadow-xs ${statusConfig.bg}`}
                     >
                       {statusConfig.label}
                     </button>
@@ -365,11 +437,11 @@ export default function FolderDetailPage() {
 
                   {/* Word & Phonetic */}
                   <div className="mb-3">
-                    <h3 className="text-2xl font-black text-theme-main group-hover:text-indigo-400 transition-colors">
+                    <h3 className="text-2xl font-black text-theme-main group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {card.word}
                     </h3>
                     {card.phonetic && (
-                      <span className="text-xs font-mono text-indigo-400 font-semibold block mt-0.5">
+                      <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold block mt-0.5">
                         {card.phonetic}
                       </span>
                     )}
@@ -377,7 +449,7 @@ export default function FolderDetailPage() {
 
                   {/* Meaning */}
                   <div className="bg-indigo-500/10 rounded-2xl p-3 mb-3 border border-indigo-500/20">
-                    <span className="text-sm font-bold text-indigo-300 block">
+                    <span className="text-sm font-bold text-indigo-400 dark:text-indigo-300 block">
                       {card.meaning}
                     </span>
                   </div>
@@ -386,13 +458,13 @@ export default function FolderDetailPage() {
                   {card.example_en && (
                     <div className="text-xs text-theme-muted space-y-1 mb-3">
                       <p className="italic text-theme-main font-medium">"{card.example_en}"</p>
-                      {card.example_vi && <p className="text-theme-subtle">{card.example_vi}</p>}
+                      {card.example_vi && <p className="text-slate-600 dark:text-slate-400 font-medium">{card.example_vi}</p>}
                     </div>
                   )}
 
                   {/* Note if exists */}
                   {card.note && (
-                    <div className="text-[11px] text-amber-300 bg-amber-500/10 px-2.5 py-1.5 rounded-xl border border-amber-500/20 font-medium">
+                    <div className="text-[11px] text-amber-900 dark:text-amber-300 bg-amber-500/10 px-2.5 py-1.5 rounded-xl border border-amber-500/20 font-medium">
                       💡 {card.note}
                     </div>
                   )}
@@ -405,14 +477,14 @@ export default function FolderDetailPage() {
                       setCardToEdit(card);
                       setIsCardModalOpen(true);
                     }}
-                    className="p-1.5 text-theme-subtle hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-theme-subtle hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
                     title="Sửa từ"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteCardClick(card)}
-                    className="p-1.5 text-theme-subtle hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-theme-subtle hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                     title="Xóa từ"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -430,7 +502,7 @@ export default function FolderDetailPage() {
         title="Xác nhận xóa từ vựng"
         message={
           <span>
-            Bạn có chắc chắn muốn xóa từ <strong className="text-theme-main font-bold">"{cardToDelete?.word}"</strong> (<span className="text-indigo-400 font-semibold">{cardToDelete?.meaning}</span>) khỏi thư mục này? Thao tác này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa từ <strong className="text-theme-main font-bold">"{cardToDelete?.word}"</strong> (<span className="text-indigo-400 dark:text-indigo-300 font-bold">{cardToDelete?.meaning}</span>) khỏi thư mục này? Thao tác này không thể hoàn tác.
           </span>
         }
         confirmText="Xác nhận xóa"
@@ -447,6 +519,7 @@ export default function FolderDetailPage() {
         onClose={() => setIsCardModalOpen(false)}
         folderId={folderId}
         cardToEdit={cardToEdit}
+        availableFolders={allFolders}
         onSaved={() => {
           showToast(cardToEdit ? 'Đã cập nhật từ vựng' : 'Đã thêm từ mới!');
           loadData();
@@ -458,6 +531,7 @@ export default function FolderDetailPage() {
         isOpen={isBulkModalOpen}
         onClose={() => setIsBulkModalOpen(false)}
         folderId={folderId}
+        availableFolders={allFolders}
         onImported={() => {
           showToast('Đã nhập hàng loạt từ vựng!');
           loadData();

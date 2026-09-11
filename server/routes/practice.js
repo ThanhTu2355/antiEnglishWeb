@@ -61,11 +61,7 @@ router.get('/questions', async (req, res) => {
     }
 
     if (status && status !== 'all') {
-      if (status === 'unmastered') {
-        matchFilter.status = { $ne: 'mastered' };
-      } else {
-        matchFilter.status = status;
-      }
+      matchFilter.status = status;
     }
 
     const isAll = limit === 'all' || Number(limit) === 0;

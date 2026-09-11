@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, GitMerge, AlertCircle, Trash2, Folder } from 'lucide-react';
 import CustomSelect from './CustomSelect';
 import { api } from '../api/client';
@@ -71,13 +72,15 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-xl bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+  if (!isOpen) return null;
+
+  const modalNode = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme bg-surface">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-500/15 text-purple-400 border border-purple-500/30 rounded-xl">
+            <div className="p-2 bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 rounded-xl">
               <GitMerge className="w-5 h-5" />
             </div>
             <div>
@@ -96,7 +99,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
         {/* Modal Body */}
         <form onSubmit={handleMerge} className="p-6 overflow-y-auto space-y-6">
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold flex items-center gap-2">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -108,7 +111,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
               <label className="text-xs font-bold text-theme-main uppercase tracking-wider">
                 1. Chọn các thư mục nguồn cần gộp:
               </label>
-              <span className="text-xs text-purple-400 font-bold bg-purple-500/15 px-2 py-0.5 rounded border border-purple-500/30">
+              <span className="text-xs text-purple-700 dark:text-purple-400 font-bold bg-purple-500/15 px-2 py-0.5 rounded border border-purple-500/30">
                 Đã chọn {selectedSourceIds.length} thư mục ({totalCardsInSources} từ)
               </span>
             </div>
@@ -122,7 +125,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                     onClick={() => toggleSourceFolder(folder.id)}
                     className={`p-3 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                       isSelected
-                        ? 'bg-purple-500/15 border-purple-500 text-purple-300 shadow-xs'
+                        ? 'bg-purple-500/15 border-purple-500 text-purple-700 dark:text-purple-300 shadow-xs'
                         : 'bg-surface border-theme text-theme-main hover:bg-surface-hover'
                     }`}
                   >
@@ -151,7 +154,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                 onClick={() => setTargetType('existing')}
                 className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   targetType === 'existing'
-                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-300'
+                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-700 dark:text-indigo-300'
                     : 'bg-surface border-theme text-theme-muted hover:bg-surface-hover'
                 }`}
               >
@@ -164,7 +167,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                 onClick={() => setTargetType('new')}
                 className={`p-3 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   targetType === 'new'
-                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-300'
+                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-700 dark:text-indigo-300'
                     : 'bg-surface border-theme text-theme-muted hover:bg-surface-hover'
                 }`}
               >
@@ -177,7 +180,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
               <div>
                 <label className="block text-xs font-bold text-theme-main mb-1">Chọn thư mục nhận:</label>
                 {availableTargetFolders.length === 0 ? (
-                  <p className="text-xs text-amber-300 p-3 bg-amber-500/15 rounded-xl border border-amber-500/30 font-medium">
+                  <p className="text-xs text-amber-800 dark:text-amber-300 p-3 bg-amber-500/15 rounded-xl border border-amber-500/30 font-medium">
                     Bạn đã chọn hết tất cả thư mục làm nguồn. Vui lòng chọn "Tạo thư mục mới" hoặc bỏ chọn bớt thư mục nguồn.
                   </p>
                 ) : (
@@ -191,7 +194,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                         value: f.id,
                         label: f.name,
                         icon: Folder,
-                        iconColor: 'text-indigo-400',
+                        iconColor: 'text-indigo-600 dark:text-indigo-400',
                         count: f.card_count || 0
                       }))
                     ]}
@@ -246,7 +249,7 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
                 className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500"
               />
               <div>
-                <span className="text-xs font-bold text-rose-400 block flex items-center gap-1">
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-400 block flex items-center gap-1">
                   <Trash2 className="w-3.5 h-3.5" />
                   Xóa các thư mục nguồn sau khi gộp thành công
                 </span>
@@ -276,4 +279,6 @@ export default function MergeFolderModal({ isOpen, onClose, folders, onMerged })
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }

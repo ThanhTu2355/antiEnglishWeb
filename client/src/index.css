@@ -1,4 +1,6 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root, [data-theme="neutral"] {
   /* Neutral Theme: Nằm giữa trắng và đen, êm dịu, không chói mắt, không tối om */
@@ -21,10 +23,10 @@
   --color-bg-surface: #ffffff;
   --color-bg-surface-hover: #f1f5f9;
   --color-bg-elevated: #ffffff;
-  --color-bg-input: #ffffff;
-  --color-bg-header: rgba(255, 255, 255, 0.9);
-  --color-border: #e2e8f0;
-  --color-border-subtle: #f1f5f9;
+  --color-bg-input: #f8fafc;
+  --color-bg-header: rgba(255, 255, 255, 0.95);
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
   --color-text-main: #0f172a;
   --color-text-muted: #334155;
   --color-text-subtle: #64748b;
@@ -89,3 +91,12 @@
 .animate-scale-up {
   animation: scaleUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

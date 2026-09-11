@@ -52,15 +52,15 @@ export default function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2.5 bg-surface border transition-all cursor-pointer shadow-xs select-none font-semibold ${sizeClasses} ${
+        className={`group w-full flex items-center justify-between gap-2.5 bg-surface border transition-all duration-150 cursor-pointer shadow-xs select-none font-semibold ${sizeClasses} ${
           isOpen
             ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
-            : 'border-theme hover:border-indigo-500/50 hover:bg-surface-hover'
+            : 'border-theme hover:border-indigo-500 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/20 hover:bg-surface-hover hover:shadow-sm'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
       >
         <div className="flex items-center gap-2 min-w-0 truncate">
           {selectedOption?.icon && (
-            <span className={`shrink-0 ${selectedOption.iconColor || 'text-indigo-400'}`}>
+            <span className={`shrink-0 transition-colors ${selectedOption.iconColor || 'text-indigo-400'}`}>
               {React.createElement(selectedOption.icon, { className: size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4' })}
             </span>
           )}
@@ -69,26 +69,29 @@ export default function CustomSelect({
               {selectedOption.badge}
             </span>
           )}
-          <span className="truncate text-theme-main font-bold">
+          <span className="truncate text-theme-main group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-bold">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           {typeof selectedOption?.count === 'number' && (
-            <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-tag-theme text-theme-muted font-bold border border-theme-subtle">
+            <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-tag-theme text-theme-muted group-hover:border-indigo-500/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 font-bold border border-theme-subtle transition-colors">
               {selectedOption.count}
             </span>
           )}
         </div>
 
         <ChevronDown
-          className={`w-4 h-4 text-theme-subtle shrink-0 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-indigo-400' : ''
+          className={`w-4 h-4 text-theme-subtle shrink-0 transition-all duration-200 ${
+            isOpen 
+              ? 'rotate-180 text-indigo-600 dark:text-indigo-400' 
+              : 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-y-0.5'
           }`}
         />
       </button>
 
       {isOpen && (
         <div
-          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 z-50 min-w-full sm:min-w-[220px] max-h-64 overflow-y-auto bg-surface/95 backdrop-blur-md border border-theme rounded-2xl shadow-2xl p-1.5 animate-scale-up ${dropdownClassName}`}
+          className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-1.5 z-50 min-w-full sm:min-w-[220px] max-h-64 overflow-y-auto bg-surface border border-theme rounded-2xl shadow-2xl p-1.5 animate-scale-up ${dropdownClassName}`}
+          style={{ backgroundColor: 'var(--color-bg-surface)' }}
         >
           <div className="space-y-0.5">
             {options.map((option) => {
@@ -103,36 +106,36 @@ export default function CustomSelect({
                     onChange(option.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs sm:text-sm transition-all cursor-pointer select-none ${
+                  className={`group/item w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs sm:text-sm transition-all duration-150 cursor-pointer select-none ${
                     isSelected
-                      ? 'bg-indigo-500/15 text-indigo-400 font-bold border border-indigo-500/20 shadow-xs'
-                      : 'text-theme-main hover:bg-surface-hover hover:text-indigo-400'
+                      ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-500/25 shadow-xs hover:bg-indigo-500/25'
+                      : 'text-theme-main hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 truncate">
                     {Icon && (
-                      <Icon className={`w-4 h-4 shrink-0 ${option.iconColor || (isSelected ? 'text-indigo-400' : 'text-theme-subtle')}`} />
+                      <Icon className={`w-4 h-4 shrink-0 transition-transform duration-150 group-hover/item:scale-110 ${option.iconColor || (isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-theme-subtle group-hover/item:text-indigo-500')}`} />
                     )}
                     {option.badge && (
-                      <span className={`shrink-0 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md border ${option.badgeClass || 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30'}`}>
+                      <span className={`shrink-0 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md border ${option.badgeClass || 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30'}`}>
                         {option.badge}
                       </span>
                     )}
-                    <span className="truncate">{option.label}</span>
+                    <span className="truncate font-semibold">{option.label}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {typeof option.count === 'number' && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold border transition-colors ${
                         isSelected 
-                          ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                          : 'bg-tag-theme text-theme-muted border-theme-subtle'
+                          ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
+                          : 'bg-tag-theme text-theme-muted border-theme-subtle group-hover/item:border-indigo-500/30 group-hover/item:bg-indigo-500/15 group-hover/item:text-indigo-600 dark:group-hover/item:text-indigo-300'
                       }`}>
                         {option.count}
                       </span>
                     )}
                     {isSelected && (
-                      <Check className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                     )}
                   </div>
                 </button>

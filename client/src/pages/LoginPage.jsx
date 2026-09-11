@@ -50,7 +50,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
 
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold flex items-center gap-2">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -103,7 +103,7 @@ export default function LoginPage() {
         {/* Footer info */}
         <div className="mt-6 text-center text-xs text-theme-subtle">
           Chưa có tài khoản?{' '}
-          <Link to="/register" className="font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+          <Link to="/register" className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
             Đăng ký ngay miễn phí
           </Link>
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, RotateCw, Volume2, Shuffle, Check, X, 
-  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2
+  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
@@ -103,8 +103,10 @@ export default function FlashcardStudyPage() {
       } else if (e.code === 'ArrowLeft') {
         handlePrev();
       } else if (e.key === '1') {
-        handleRate('learning');
+        handleRate('unmastered');
       } else if (e.key === '2') {
+        handleRate('learning');
+      } else if (e.key === '3') {
         handleRate('mastered');
       } else if (e.key === 'm' || e.key === 'M') {
         e.preventDefault();
@@ -267,11 +269,11 @@ export default function FlashcardStudyPage() {
           <div className="grid grid-cols-2 gap-3 py-2">
             <div className="bg-input-theme rounded-2xl p-4 border border-theme-subtle">
               <span className="text-xs text-theme-subtle font-medium block">Đã ghi nhớ tốt</span>
-              <span className="text-2xl font-black text-emerald-400 mt-1 block">+{masteredCount} từ</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">+{masteredCount} từ</span>
             </div>
             <div className="bg-input-theme rounded-2xl p-4 border border-theme-subtle">
               <span className="text-xs text-theme-subtle font-medium block">Tổng số thẻ ôn</span>
-              <span className="text-2xl font-black text-indigo-400 mt-1 block">{cards.length} thẻ</span>
+              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{cards.length} thẻ</span>
             </div>
           </div>
 
@@ -348,6 +350,18 @@ export default function FlashcardStudyPage() {
       iconColor: 'text-indigo-400'
     },
     {
+      value: 'new',
+      label: 'Chỉ từ mới',
+      icon: Sparkles,
+      iconColor: 'text-sky-400'
+    },
+    {
+      value: 'learning',
+      label: 'Chỉ từ đang học',
+      icon: Clock,
+      iconColor: 'text-amber-400'
+    },
+    {
       value: 'unmastered',
       label: 'Chỉ từ chưa thuộc',
       icon: XCircle,
@@ -409,7 +423,7 @@ export default function FlashcardStudyPage() {
             title="Xáo trộn thứ tự thẻ"
             className="px-3.5 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap"
           >
-            <Shuffle className="w-3.5 h-3.5 text-indigo-400" />
+            <Shuffle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>Xáo trộn</span>
           </button>
         </div>
@@ -419,7 +433,7 @@ export default function FlashcardStudyPage() {
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs font-bold text-theme-subtle">
           <span>Tiến độ học</span>
-          <span className="text-indigo-400">Thẻ {currentIndex + 1} / {cards.length} ({progressPercent}%)</span>
+          <span className="text-indigo-600 dark:text-indigo-400">Thẻ {currentIndex + 1} / {cards.length} ({progressPercent}%)</span>
         </div>
         <div className="w-full bg-input-theme rounded-full h-2.5 overflow-hidden border border-theme-subtle">
           <div
@@ -445,13 +459,26 @@ export default function FlashcardStudyPage() {
                 <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
                   {getLevelBadge(currentCard.level).name}
                 </span>
-                <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
+                <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
                   {currentCard.part_of_speech || 'Từ vựng'}
+                </span>
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                  currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                  currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                  currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                  'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                }`}>
+                  {
+                    currentCard.status === 'mastered' ? 'Đã thuộc' :
+                    currentCard.status === 'learning' ? 'Đang học' :
+                    currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                    'Từ mới'
+                  }
                 </span>
               </div>
 
               <div onClick={(e) => e.stopPropagation()}>
-                <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
+                <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
               </div>
             </div>
 
@@ -461,7 +488,7 @@ export default function FlashcardStudyPage() {
                 {currentCard.word}
               </h2>
               {currentCard.phonetic && (
-                <p className="text-xl font-mono text-indigo-400 font-bold tracking-wide">
+                <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
                   {currentCard.phonetic}
                 </p>
               )}
@@ -470,15 +497,22 @@ export default function FlashcardStudyPage() {
             {/* Bottom hint */}
             <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
               <span className="flex items-center gap-1">
-                <span>Bấm vào thẻ hoặc</span>
+                <span>Bấm thẻ hoặc</span>
                 <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">Space</kbd>
-                <span>để xem nghĩa</span>
+                <span>xem nghĩa</span>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                <span>nghe đọc</span>
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <span>Phím</span>
-                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
-                <span>để nghe đọc</span>
+                <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
+                <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
+                <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                <span>đánh giá</span>
               </span>
             </div>
           </div>
@@ -495,16 +529,29 @@ export default function FlashcardStudyPage() {
                 {currentCard.phonetic && (
                   <span className="text-xs font-mono text-theme-subtle font-semibold">({currentCard.phonetic})</span>
                 )}
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                  currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                  currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                  currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                  'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                }`}>
+                  {
+                    currentCard.status === 'mastered' ? 'Đã thuộc' :
+                    currentCard.status === 'learning' ? 'Đang học' :
+                    currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                    'Từ mới'
+                  }
+                </span>
               </div>
               <div onClick={(e) => e.stopPropagation()}>
-                <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
+                <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
               </div>
             </div>
 
             {/* Center: Vietnamese Meaning */}
             <div className="text-center my-auto space-y-4">
-              <div className="inline-block bg-input-theme border border-indigo-500/30 px-6 py-3 rounded-2xl shadow-xs">
-                <p className="text-2xl sm:text-3xl font-black text-indigo-300">
+              <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 px-6 py-3.5 rounded-2xl shadow-xs">
+                <p className="text-2xl sm:text-3xl font-black text-indigo-400 dark:text-indigo-300">
                   {currentCard.meaning}
                 </p>
               </div>
@@ -525,7 +572,7 @@ export default function FlashcardStudyPage() {
 
               {/* Note */}
               {currentCard.note && (
-                <p className="text-xs text-amber-300 font-semibold bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30 inline-block">
+                <p className="text-xs text-amber-900 dark:text-amber-300 font-semibold bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30 inline-block">
                   💡 {currentCard.note}
                 </p>
               )}
@@ -537,7 +584,7 @@ export default function FlashcardStudyPage() {
               <span>•</span>
               <span className="flex items-center gap-1">
                 <span>Phím</span>
-                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
                 <span>nghe đọc</span>
               </span>
             </div>
@@ -546,36 +593,44 @@ export default function FlashcardStudyPage() {
       </div>
 
       {/* Assessment Controls */}
-      <div className="max-w-2xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+      <div className="max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2">
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
-          className="py-3 px-4 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main text-xs sm:text-sm font-bold border border-theme shadow-xs transition-all disabled:opacity-40 cursor-pointer"
+          className="py-3 px-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main text-xs sm:text-sm font-bold border border-theme shadow-xs transition-all disabled:opacity-40 cursor-pointer text-center"
         >
-          ← Thẻ trước (←)
+          ← Thẻ trước
         </button>
 
         <button
-          onClick={() => handleRate('learning')}
-          className="py-3 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+          onClick={() => handleRate('unmastered')}
+          className="py-3 px-2.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
         >
-          <X className="w-4 h-4" />
+          <X className="w-4 h-4 shrink-0" />
           <span>Chưa thuộc (1)</span>
         </button>
 
         <button
-          onClick={() => handleRate('mastered')}
-          className="py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs"
+          onClick={() => handleRate('learning')}
+          className="py-3 px-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
         >
-          <Check className="w-4 h-4" />
-          <span>Đã thuộc (2)</span>
+          <Clock className="w-4 h-4 shrink-0" />
+          <span>Đang học (2)</span>
+        </button>
+
+        <button
+          onClick={() => handleRate('mastered')}
+          className="py-3 px-2.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
+        >
+          <Check className="w-4 h-4 shrink-0" />
+          <span>Đã thuộc (3)</span>
         </button>
 
         <button
           onClick={handleNext}
-          className="py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer"
+          className="py-3 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer text-center col-span-2 sm:col-span-1"
         >
-          Thẻ kế tiếp (→)
+          Thẻ kế tiếp →
         </button>
       </div>
 

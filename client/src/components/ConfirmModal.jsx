@@ -53,10 +53,10 @@ export default function ConfirmModal({
           <div 
             className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
               isDanger 
-                ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30 shadow-rose-500/20' 
+                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-rose-500/20' 
                 : isWarning 
-                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-amber-500/20'
-                : 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 shadow-indigo-500/20'
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-amber-500/20'
+                : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 shadow-indigo-500/20'
             }`}
           >
             {isDanger ? (

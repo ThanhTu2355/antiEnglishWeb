@@ -50,7 +50,7 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div className="shrink-0">
-              <span className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block leading-tight">
+              <span className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent block leading-tight">
                 AntiEnglish
               </span>
               <span className="hidden xl:block text-[10px] text-theme-subtle font-medium leading-none">Học Từ Vựng Tiếng Anh</span>
@@ -103,13 +103,13 @@ export default function Navbar() {
           <div className="flex items-center space-x-2 sm:space-x-2.5 lg:space-x-3 shrink-0">
             {stats && (
               <div className="hidden lg:flex items-center space-x-2 bg-surface px-3 py-1.5 rounded-full border border-theme text-xs shrink-0 whitespace-nowrap shadow-xs">
-                <span className="font-bold text-rose-400 flex items-center gap-1" title="Số từ chưa thuộc">
+                <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1" title="Số từ chưa thuộc">
                   <span className="hidden xl:inline">Chưa thuộc:</span>
                   <span className="xl:hidden">❌</span>
                   <span>{stats.unmastered_cards !== undefined ? stats.unmastered_cards : (stats.total_cards - stats.mastered_cards)}</span>
                 </span>
                 <span className="text-theme-subtle">|</span>
-                <span className="font-bold text-emerald-400 flex items-center gap-1" title="Số từ đã thuộc">
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1" title="Số từ đã thuộc">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span className="hidden xl:inline">Đã thuộc:</span>
                   <span>{stats.mastered_cards}/{stats.total_cards}</span>
@@ -122,7 +122,7 @@ export default function Navbar() {
 
             <div className="flex items-center space-x-2 pl-2 border-l border-theme shrink-0">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xs shrink-0">
+                <div className="w-8 h-8 rounded-full bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xs shrink-0">
                   {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="hidden xl:block text-left shrink-0">
@@ -134,7 +134,7 @@ export default function Navbar() {
               <button
                 onClick={() => setShowLogoutConfirm(true)}
                 title="Đăng xuất"
-                className="p-1.5 sm:p-2 text-theme-subtle hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
+                className="p-1.5 sm:p-2 text-theme-subtle hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -149,7 +149,7 @@ export default function Navbar() {
           to="/"
           onClick={(e) => handleNavClick(e, '/')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
-            isDashboard ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
+            isDashboard ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
         >
           <Layers className="w-4 h-4 mb-1" />
@@ -159,7 +159,7 @@ export default function Navbar() {
           to="/flashcards"
           onClick={(e) => handleNavClick(e, '/flashcards')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
-            isFlashcards ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
+            isFlashcards ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
         >
           <BookOpen className="w-4 h-4 mb-1" />
@@ -169,7 +169,7 @@ export default function Navbar() {
           to="/practice"
           onClick={(e) => handleNavClick(e, '/practice')}
           className={`flex flex-col items-center py-1 px-3 rounded-lg ${
-            isPractice ? 'text-indigo-400 font-bold' : 'text-theme-subtle'
+            isPractice ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-theme-subtle'
           }`}
         >
           <Award className="w-4 h-4 mb-1" />

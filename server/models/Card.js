@@ -45,7 +45,7 @@ const cardSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['new', 'learning', 'mastered'],
+    enum: ['new', 'learning', 'unmastered', 'mastered'],
     default: 'new',
     index: true
   },
@@ -65,6 +65,13 @@ cardSchema.set('toJSON', {
   virtuals: true,
   transform: (doc, ret) => {
     ret.id = ret._id.toString();
+    if (ret.folder_id && typeof ret.folder_id === 'object' && ret.folder_id._id) {
+      ret.folder_name = ret.folder_id.name;
+      ret.folder_color = ret.folder_id.color;
+      ret.folder_id = ret.folder_id._id.toString();
+    } else if (ret.folder_id) {
+      ret.folder_id = ret.folder_id.toString();
+    }
     delete ret.__v;
     return ret;
   }
@@ -74,6 +81,13 @@ cardSchema.set('toObject', {
   virtuals: true,
   transform: (doc, ret) => {
     ret.id = ret._id.toString();
+    if (ret.folder_id && typeof ret.folder_id === 'object' && ret.folder_id._id) {
+      ret.folder_name = ret.folder_id.name;
+      ret.folder_color = ret.folder_id.color;
+      ret.folder_id = ret.folder_id._id.toString();
+    } else if (ret.folder_id) {
+      ret.folder_id = ret.folder_id.toString();
+    }
     delete ret.__v;
     return ret;
   }

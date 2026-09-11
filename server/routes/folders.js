@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const mongoose = require('mongoose');
 const Folder = require('../models/Folder');
 const Card = require('../models/Card');
@@ -47,6 +47,45 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('Get folders error:', err);
     res.status(500).json({ error: 'Không thể lấy danh sách thư mục' });
+  }
+});
+
+// Get all-cards virtual folder summary
+router.get('/all', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const cardAgg = await Card.aggregate([
+      { $match: { user_id: new mongoose.Types.ObjectId(userId) } },
+      {
+        $group: {
+          _id: null,
+          card_count: { $sum: 1 },
+          new_count: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } },
+          mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+          unmastered_count: { $sum: { $cond: [{ $eq: ['$status', 'unmastered'] }, 1, 0] } },
+          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const s = cardAgg[0] || {};
+    res.json({
+      id: 'all',
+      _id: 'all',
+      name: 'Tất cả từ vựng',
+      description: 'Thư mục tổng hợp chứa toàn bộ từ vựng từ tất cả các thư mục của bạn.',
+      color: 'indigo',
+      icon: 'layers',
+      is_all_folder: true,
+      card_count: s.card_count || 0,
+      new_count: s.new_count || 0,
+      mastered_count: s.mastered_count || 0,
+      unmastered_count: s.unmastered_count || 0,
+      learning_count: s.learning_count || 0
+    });
+  } catch (err) {
+    console.error('Get all-folder summary error:', err);
+    res.status(500).json({ error: 'Lỗi máy chủ' });
   }
 });
 

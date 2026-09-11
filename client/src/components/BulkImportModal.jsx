@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UploadCloud, Sparkles, Check } from 'lucide-react';
 import { api } from '../api/client';
 import CustomSelect from './CustomSelect';
@@ -31,11 +32,29 @@ innovative | mang tính đổi mới, sáng tạo | She proposed an innovative s
   }
 ];
 
-export default function BulkImportModal({ isOpen, onClose, folderId, onImported }) {
+export default function BulkImportModal({ isOpen, onClose, folderId, onImported, availableFolders = [] }) {
+  const [folders, setFolders] = useState(availableFolders);
+  const [selectedFolderId, setSelectedFolderId] = useState(folderId && folderId !== 'all' ? folderId : '');
   const [rawText, setRawText] = useState('');
   const [defaultLevel, setDefaultLevel] = useState('B1');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (availableFolders && availableFolders.length > 0) {
+      setFolders(availableFolders);
+      if (!selectedFolderId && availableFolders[0]?.id) {
+        setSelectedFolderId(availableFolders[0].id);
+      }
+    } else if (isOpen && (folderId === 'all' || !folderId)) {
+      api.folders.getAll().then(data => {
+        setFolders(data || []);
+        if (data && data.length > 0 && !selectedFolderId) {
+          setSelectedFolderId(data[0].id);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen, availableFolders, folderId]);
 
   if (!isOpen) return null;
 
@@ -88,11 +107,17 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
       return;
     }
 
+    const finalFolderId = (folderId && folderId !== 'all') ? folderId : selectedFolderId;
+    if (!finalFolderId) {
+      setError('Vui lòng chọn thư mục để nhập từ vựng');
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
       await api.cards.bulkCreate({
-        folder_id: folderId,
+        folder_id: finalFolderId,
         default_level: defaultLevel,
         cards: parsedCards
       });
@@ -105,13 +130,15 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-      <div className="relative w-full max-w-xl bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+  if (!isOpen) return null;
+
+  const modalNode = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-surface border border-theme rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-theme bg-surface">
           <div className="flex items-center space-x-2">
-            <UploadCloud className="w-5 h-5 text-indigo-400" />
+            <UploadCloud className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <h3 className="text-lg font-bold text-theme-main">Nhập hàng loạt từ vựng</h3>
           </div>
           <button
@@ -125,8 +152,23 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
         {/* Content */}
         <form onSubmit={handleImport} className="p-6 overflow-y-auto space-y-4">
           {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400 text-sm font-semibold">
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold">
               {error}
+            </div>
+          )}
+
+          {/* Folder Selector if in All Words folder */}
+          {(!folderId || folderId === 'all') && (
+            <div>
+              <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
+                Lưu vào thư mục <span className="text-rose-600 dark:text-rose-400">*</span>
+              </label>
+              <CustomSelect
+                value={selectedFolderId}
+                onChange={setSelectedFolderId}
+                options={folders.map(f => ({ value: f.id, label: f.name }))}
+                className="w-full"
+              />
             </div>
           )}
 
@@ -141,9 +183,9 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
                   key={idx}
                   type="button"
                   onClick={() => setRawText(preset.data)}
-                  className="px-3.5 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                   <span>{preset.name}</span>
                 </button>
               ))}
@@ -171,7 +213,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
           {/* Text Area */}
           <div>
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-              Dán danh sách từ (Mỗi dòng một từ: <span className="text-indigo-400 font-mono">Từ | Nghĩa | Ví dụ (tuỳ chọn) | Cấp bậc (tuỳ chọn)</span>):
+              Dán danh sách từ (Mỗi dòng một từ: <span className="text-indigo-600 dark:text-indigo-400 font-mono">Từ | Nghĩa | Ví dụ (tuỳ chọn) | Cấp bậc (tuỳ chọn)</span>):
             </label>
             <textarea
               rows={8}
@@ -185,7 +227,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
           {/* Preview count */}
           <div className="flex items-center justify-between text-xs px-4 py-2.5 bg-input-theme rounded-xl border border-theme-subtle text-theme-muted font-medium">
             <span>Số từ nhận diện được:</span>
-            <span className="font-black text-emerald-400 text-sm">{parsedCards.length} từ</span>
+            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{parsedCards.length} từ</span>
           </div>
 
           {/* Footer */}
@@ -210,4 +252,6 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported 
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }

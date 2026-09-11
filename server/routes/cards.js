@@ -20,11 +20,7 @@ router.get('/', async (req, res) => {
     }
 
     if (status && status !== 'all') {
-      if (status === 'unmastered') {
-        filter.status = { $ne: 'mastered' };
-      } else {
-        filter.status = status;
-      }
+      filter.status = status;
     }
 
     if (level && level !== 'all') {
@@ -45,7 +41,7 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const cards = await Card.find(filter).sort({ _id: -1 });
+    const cards = await Card.find(filter).populate('folder_id', 'name color').sort({ _id: -1 });
     res.json(cards);
   } catch (err) {
     console.error('Get cards error:', err);
@@ -86,6 +82,7 @@ router.post('/', async (req, res) => {
       meaning,
       part_of_speech = 'noun',
       level = 'B1',
+      status = 'new',
       example_en = '',
       example_vi = '',
       note = ''
@@ -116,7 +113,7 @@ router.post('/', async (req, res) => {
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim(),
-      status: 'new'
+      status: ['new', 'learning', 'unmastered', 'mastered'].includes(status) ? status : 'new'
     });
 
     await Folder.findByIdAndUpdate(folder_id, { updated_at: new Date() });
@@ -244,7 +241,7 @@ router.patch('/:id/status', async (req, res) => {
     const userId = req.user.id;
     const { status } = req.body;
 
-    if (!['new', 'learning', 'mastered'].includes(status)) {
+    if (!['new', 'learning', 'unmastered', 'mastered'].includes(status)) {
       return res.status(400).json({ error: 'Trạng thái học không hợp lệ' });
     }
 
