@@ -16,6 +16,7 @@ const SAMPLE_WORDS = [
   { word: 'essential', phonetic: '/ɪˈsen.ʃəl/', meaning: 'thiết yếu, cực kỳ quan trọng', pos: 'adjective', level: 'A2', en: 'Water is essential for all living beings.', vi: 'Nước là thiết yếu cho mọi sinh vật sống.', n: 'Đồng nghĩa: vital, crucial' },
   { word: 'algorithm', phonetic: '/ˈæl.ɡə.rɪ.ðəm/', meaning: 'thuật toán, quy trình giải quyết vấn đề từng bước', pos: 'noun', level: 'Other', en: 'A search engine uses a complex algorithm to rank web pages.', vi: 'Một công cụ tìm kiếm sử dụng một thuật toán phức tạp để xếp hạng các trang web.', n: 'Thuật ngữ tin học / chuyên ngành kỹ thuật' },
   { word: 'photosynthesis', phonetic: '/ˌfoʊ.toʊˈsɪn.θə.sɪs/', meaning: 'quang hợp (quá trình tổng hợp chất hữu cơ nhờ ánh sáng)', pos: 'noun', level: 'Other', en: 'Green plants use photosynthesis to produce energy.', vi: 'Cây xanh dùng quá trình quang hợp để tạo ra năng lượng.', n: 'Thuật ngữ sinh học / chuyên ngành' },
+  { word: 'It goes without saying', phonetic: '/ɪt ɡoʊz wɪˈðaʊt ˈseɪ.ɪŋ/', meaning: 'rõ ràng là, không cần phải nói cũng biết', pos: 'expression', level: 'B2', en: 'It goes without saying that practice makes perfect.', vi: 'Rõ ràng là luyện tập nhiều sẽ tạo nên sự hoàn hảo.', n: 'Mẫu câu giao tiếp thông dụng' },
 ];
 
 export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSaved, availableFolders = [] }) {
@@ -88,7 +89,8 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
     { value: 'adverb', label: 'Trạng từ (adv)' },
     { value: 'preposition', label: 'Giới từ (prep)' },
     { value: 'phrase', label: 'Cụm từ (phrase)' },
-    { value: 'idiom', label: 'Thành ngữ (idiom)' }
+    { value: 'idiom', label: 'Thành ngữ (idiom)' },
+    { value: 'expression', label: 'Mẫu câu giao tiếp (Expression)' }
   ];
 
   if (!isOpen) return null;

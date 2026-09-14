@@ -1,11 +1,17 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const User = require('../models/User');
 const Folder = require('../models/Folder');
 const Card = require('../models/Card');
 
+let isSeeded = false;
+
 async function connectDB() {
+  if (mongoose.connection.readyState >= 1) {
+    return true;
+  }
+
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     console.warn('\n⚠️ CẢNH BÁO: Chưa cấu hình MONGODB_URI trong file .env hoặc biến môi trường.');
@@ -20,7 +26,10 @@ async function connectDB() {
     console.log('🍃 Đã kết nối thành công tới MongoDB Atlas!');
     console.log('=========================================');
 
-    await seedDemoUserIfMissing();
+    if (!isSeeded) {
+      isSeeded = true;
+      await seedDemoUserIfMissing();
+    }
     return true;
   } catch (err) {
     console.error('❌ Lỗi kết nối MongoDB Atlas:', err.message);
