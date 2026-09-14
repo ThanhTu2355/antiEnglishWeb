@@ -122,22 +122,23 @@ router.get('/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy người dùng' });
     }
 
-    // Stats
-    const folderCount = await Folder.countDocuments({ user_id: req.user.id });
-    
-    // Aggregations on cards for current user
-    const statsResult = await Card.aggregate([
-      { $match: { user_id: user._id } },
-      {
-        $group: {
-          _id: null,
-          total_cards: { $sum: 1 },
-          mastered_cards: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
-          unmastered_cards: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
-          learning_cards: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
-          new_cards: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } }
+    // Run stats queries in parallel
+    const [folderCount, statsResult, practiceCount] = await Promise.all([
+      Folder.countDocuments({ user_id: req.user.id }),
+      Card.aggregate([
+        { $match: { user_id: user._id } },
+        {
+          $group: {
+            _id: null,
+            total_cards: { $sum: 1 },
+            mastered_cards: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+            unmastered_cards: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
+            learning_cards: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
+            new_cards: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } }
+          }
         }
-      }
+      ]),
+      PracticeHistory.countDocuments({ user_id: req.user.id })
     ]);
 
     const cardStats = statsResult[0] || {

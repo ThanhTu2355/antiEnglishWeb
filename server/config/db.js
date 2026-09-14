@@ -21,14 +21,18 @@ async function connectDB() {
   }
 
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
     console.log('=========================================');
     console.log('🍃 Đã kết nối thành công tới MongoDB Atlas!');
     console.log('=========================================');
 
-    if (!isSeeded) {
+    if (!isSeeded && process.env.NODE_ENV !== 'production') {
       isSeeded = true;
-      await seedDemoUserIfMissing();
+      seedDemoUserIfMissing().catch(err => console.error('Seed demo error:', err));
     }
     return true;
   } catch (err) {

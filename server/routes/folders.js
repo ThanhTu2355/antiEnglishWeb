@@ -99,23 +99,25 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'ID thư mục không hợp lệ' });
     }
 
-    const folder = await Folder.findOne({ _id: folderId, user_id: userId });
+    const [folder, cardAgg] = await Promise.all([
+      Folder.findOne({ _id: folderId, user_id: userId }),
+      Card.aggregate([
+        { $match: { folder_id: new mongoose.Types.ObjectId(folderId) } },
+        {
+          $group: {
+            _id: '$folder_id',
+            card_count: { $sum: 1 },
+            mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
+            unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
+            learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+          }
+        }
+      ])
+    ]);
+
     if (!folder) {
       return res.status(404).json({ error: 'Không tìm thấy thư mục' });
     }
-
-    const cardAgg = await Card.aggregate([
-      { $match: { folder_id: folder._id } },
-      {
-        $group: {
-          _id: '$folder_id',
-          card_count: { $sum: 1 },
-          mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
-          unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
-          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
-        }
-      }
-    ]);
 
     const s = cardAgg[0] || {};
     res.json({

@@ -2,6 +2,7 @@
   "version": 2,
   "buildCommand": "npm --prefix client install && npm --prefix client run build",
   "outputDirectory": "client/dist",
+  "regions": ["sin1"],
   "rewrites": [
     {
       "source": "/api/(.*)",

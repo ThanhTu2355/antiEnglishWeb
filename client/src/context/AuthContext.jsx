@@ -9,8 +9,22 @@ const TOKEN_KEY = 'anti_english_token';
 const EXPIRED_KEY = 'anti_english_session_expired';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [stats, setStats] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('anti_english_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [stats, setStats] = useState(() => {
+    try {
+      const saved = localStorage.getItem('anti_english_stats');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY);
     if (!savedToken) return null;
@@ -19,12 +33,18 @@ export function AuthProvider({ children }) {
     if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(LAST_ACTIVE_KEY);
+      localStorage.removeItem('anti_english_user');
+      localStorage.removeItem('anti_english_stats');
       sessionStorage.setItem(EXPIRED_KEY, '1');
       return null;
     }
     return savedToken;
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const savedToken = localStorage.getItem(TOKEN_KEY);
+    const savedUser = localStorage.getItem('anti_english_user');
+    return Boolean(savedToken && !savedUser);
+  });
 
   // Update last activity timestamp
   function updateLastActive() {
@@ -74,12 +94,14 @@ export function AuthProvider({ children }) {
 
   async function loadProfile(isInitial = false) {
     try {
-      if (isInitial) {
+      if (isInitial && !user) {
         setLoading(true);
       }
       const data = await api.auth.me();
       setUser(data.user);
       setStats(data.stats);
+      localStorage.setItem('anti_english_user', JSON.stringify(data.user));
+      localStorage.setItem('anti_english_stats', JSON.stringify(data.stats));
     } catch (err) {
       console.error('Failed to load profile:', err);
       logout();
@@ -119,6 +141,8 @@ export function AuthProvider({ children }) {
   function logout(isExpired = false) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(LAST_ACTIVE_KEY);
+    localStorage.removeItem('anti_english_user');
+    localStorage.removeItem('anti_english_stats');
     if (isExpired) {
       sessionStorage.setItem(EXPIRED_KEY, '1');
     } else {
