@@ -149,8 +149,6 @@ router.get('/me', authenticateToken, async (req, res) => {
       new_cards: 0
     };
 
-    const practiceCount = await PracticeHistory.countDocuments({ user_id: req.user.id });
-
     res.json({
       user,
       stats: {
