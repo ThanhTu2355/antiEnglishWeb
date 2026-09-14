@@ -19,10 +19,17 @@ async function request(endpoint, options = {}) {
     }
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data = {};
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    data = await response.json().catch(() => ({}));
+  } else if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Lỗi máy chủ (${response.status}): ${text.slice(0, 80) || response.statusText}`);
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
+    throw new Error(data.error || `Lỗi máy chủ (${response.status}). Vui lòng thử lại.`);
   }
 
   return data;
