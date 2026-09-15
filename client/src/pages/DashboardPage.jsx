@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FolderPlus, GitMerge, BookOpen, Award, Layers, Sparkles, 
@@ -65,6 +65,78 @@ export default function DashboardPage() {
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  // Drag and drop folders reordering
+  const [draggedFolderId, setDraggedFolderId] = useState(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState(null);
+  const justDraggedRef = useRef(false);
+
+  function handleDragStart(e, id) {
+    if (search.trim()) return;
+    setDraggedFolderId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  }
+
+  function handleDragOver(e, id) {
+    if (search.trim() || !draggedFolderId || draggedFolderId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverFolderId !== id) {
+      setDragOverFolderId(id);
+    }
+  }
+
+  function handleDragLeave(e, id) {
+    if (e.currentTarget.contains(e.relatedTarget)) {
+      return;
+    }
+    if (dragOverFolderId === id) {
+      setDragOverFolderId(null);
+    }
+  }
+
+  async function handleDrop(e, targetId) {
+    e.preventDefault();
+    setDragOverFolderId(null);
+    justDraggedRef.current = true;
+    setTimeout(() => { justDraggedRef.current = false; }, 150);
+
+    const sourceId = draggedFolderId || e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) {
+      setDraggedFolderId(null);
+      return;
+    }
+
+    const sourceIndex = folders.findIndex(f => f.id === sourceId);
+    const targetIndex = folders.findIndex(f => f.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) {
+      setDraggedFolderId(null);
+      return;
+    }
+
+    // Reorder locally immediately for 0ms visual latency
+    const reordered = [...folders];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    setFolders(reordered);
+    setDraggedFolderId(null);
+
+    try {
+      await api.folders.reorder(reordered.map(f => f.id));
+    } catch (err) {
+      console.error('Failed to save folder order:', err);
+      showToast('Không thể lưu thứ tự thư mục');
+      await loadFolders();
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggedFolderId(null);
+    setDragOverFolderId(null);
+    justDraggedRef.current = true;
+    setTimeout(() => { justDraggedRef.current = false; }, 150);
   }
 
   const filteredFolders = folders.filter(f => 
@@ -215,8 +287,9 @@ export default function DashboardPage() {
           {matchesAllFolder && (
             <div
               key="all-words-smart-folder"
+              draggable={false}
               onClick={() => navigate('/folders/all')}
-              className="group relative bg-surface border-2 border-indigo-500/60 hover:border-indigo-600 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/25 rounded-3xl p-6 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-1 hover:shadow-xl shadow-xs cursor-pointer flex flex-col justify-between"
+              className="group relative bg-surface border-2 border-indigo-500/60 hover:border-indigo-600 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/25 rounded-3xl p-6 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-1 hover:shadow-xl shadow-xs cursor-pointer flex flex-col justify-between select-none"
             >
               <div>
                 {/* Top row */}
@@ -288,18 +361,36 @@ export default function DashboardPage() {
             const mastered = folder.mastered_count || 0;
             const unmastered = folder.unmastered_count !== undefined ? folder.unmastered_count : (cardCount - mastered);
             const percent = cardCount > 0 ? Math.round((mastered / cardCount) * 100) : 0;
+            const isDragging = draggedFolderId === folder.id;
+            const isDragOver = dragOverFolderId === folder.id;
+            const canDrag = !search.trim();
 
             return (
               <div
                 key={folder.id}
-                onClick={() => navigate(`/folders/${folder.id}`)}
-                className="group relative bg-surface border border-theme hover:border-indigo-500/60 rounded-3xl p-6 transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col justify-between"
+                draggable={canDrag}
+                onDragStart={(e) => handleDragStart(e, folder.id)}
+                onDragOver={(e) => handleDragOver(e, folder.id)}
+                onDragLeave={(e) => handleDragLeave(e, folder.id)}
+                onDrop={(e) => handleDrop(e, folder.id)}
+                onDragEnd={handleDragEnd}
+                onClick={() => {
+                  if (justDraggedRef.current) return;
+                  navigate(`/folders/${folder.id}`);
+                }}
+                className={`group relative bg-surface border rounded-3xl p-6 transition-all duration-200 ease-out flex flex-col justify-between ${
+                  isDragging
+                    ? 'opacity-30 scale-[0.97] border-dashed border-indigo-500 ring-2 ring-indigo-500/20 shadow-none cursor-grabbing'
+                    : isDragOver
+                    ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-background border-indigo-500 bg-indigo-500/5 -translate-y-1 shadow-xl'
+                    : 'border-theme hover:border-indigo-500/60 hover:-translate-y-1 hover:shadow-xl cursor-pointer'
+                }`}
               >
                 <div>
                   {/* Top row */}
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                         <Layers className="w-5 h-5" />
                       </div>
                       <div>
@@ -313,7 +404,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Edit / Delete actions */}
-                    <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setFolderToEdit(folder);
@@ -355,7 +446,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Bottom Action Buttons */}
-                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-theme-subtle" onClick={(e) => e.stopPropagation()}>
+                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-theme-subtle" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => navigate(`/flashcards/${folder.id}`)}
                     disabled={cardCount === 0}

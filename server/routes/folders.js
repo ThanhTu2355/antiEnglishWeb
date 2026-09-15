@@ -11,7 +11,7 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const folders = await Folder.find({ user_id: userId }).sort({ updated_at: -1, _id: -1 });
+    const folders = await Folder.find({ user_id: userId }).sort({ order: 1, updated_at: -1, _id: -1 });
 
     const folderIds = folders.map(f => f._id);
     const cardAgg = await Card.aggregate([
@@ -89,6 +89,31 @@ router.get('/all', async (req, res) => {
   }
 });
 
+// Reorder folders
+router.put('/reorder', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { folder_ids } = req.body;
+
+    if (!Array.isArray(folder_ids) || folder_ids.length === 0) {
+      return res.status(400).json({ error: 'Danh sách ID thư mục không hợp lệ' });
+    }
+
+    const bulkOps = folder_ids.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id, user_id: userId },
+        update: { $set: { order: index } }
+      }
+    }));
+
+    await Folder.bulkWrite(bulkOps);
+    res.json({ message: 'Đã lưu thứ tự thư mục thành công' });
+  } catch (err) {
+    console.error('Reorder folders error:', err);
+    res.status(500).json({ error: 'Lỗi khi cập nhật thứ tự thư mục' });
+  }
+});
+
 // Get single folder
 router.get('/:id', async (req, res) => {
   try {
@@ -143,12 +168,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Tên thư mục không được để trống' });
     }
 
+    const maxOrderFolder = await Folder.findOne({ user_id: userId }).sort({ order: -1 });
+    const nextOrder = maxOrderFolder && typeof maxOrderFolder.order === 'number' ? maxOrderFolder.order + 1 : 0;
+
     const newFolder = await Folder.create({
       user_id: userId,
       name: name.trim(),
       description: description.trim(),
       color,
-      icon
+      icon,
+      order: nextOrder
     });
 
     res.status(201).json({

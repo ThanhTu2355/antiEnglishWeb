@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
 const folderSchema = new mongoose.Schema({
   user_id: {
@@ -31,6 +31,11 @@ const folderSchema = new mongoose.Schema({
   updated_at: {
     type: Date,
     default: Date.now
+  },
+  order: {
+    type: Number,
+    default: 0,
+    index: true
   }
 });
 

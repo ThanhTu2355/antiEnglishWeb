@@ -67,6 +67,10 @@ export const api = {
     merge: (data) => request('/folders/merge', {
       method: 'POST',
       body: JSON.stringify(data)
+    }),
+    reorder: (folder_ids) => request('/folders/reorder', {
+      method: 'PUT',
+      body: JSON.stringify({ folder_ids })
     })
   },
 
