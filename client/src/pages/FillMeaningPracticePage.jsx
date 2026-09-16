@@ -194,6 +194,11 @@ export default function FillMeaningPracticePage() {
       setUserAnswer('');
       setCheckedResult(null);
       setShowHint(false);
+      if (mode !== 'multiple_choice') {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+      }
     } else {
       finishQuiz();
     }
@@ -222,6 +227,8 @@ export default function FillMeaningPracticePage() {
 
   function handleKeyDown(e) {
     if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
       if (checkedResult) {
         handleNextQuestion();
       } else {
@@ -229,6 +236,30 @@ export default function FillMeaningPracticePage() {
       }
     }
   }
+
+  // Global Enter key listener: allows pressing Enter to advance question even if input is blurred or in multiple-choice
+  useEffect(() => {
+    if (quizState !== 'playing') return;
+
+    function handleGlobalKeyDown(e) {
+      if (e.key === 'Enter') {
+        if (isQuitModalOpen) return;
+
+        if (checkedResult) {
+          e.preventDefault();
+          handleNextQuestion();
+        } else if (mode !== 'multiple_choice') {
+          if (document.activeElement !== inputRef.current && userAnswer.trim() && !loading) {
+            e.preventDefault();
+            handleCheckAnswer();
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [quizState, checkedResult, isQuitModalOpen, mode, loading, userAnswer, currentIndex, questions.length]);
 
   const folderPracticeOptions = [
     {
@@ -525,7 +556,11 @@ export default function FillMeaningPracticePage() {
                       <span className="text-xs text-theme-subtle font-mono">({item.question.phonetic})</span>
                     </div>
                     <p className="text-xs text-theme-muted">
-                      Nghĩa đúng: <span className="font-bold text-theme-main">{item.expectedAnswer}</span>
+                      {mode === 'fill_word' ? 'Từ tiếng Anh đúng: ' : 'Nghĩa đúng: '}
+                      <span className="font-bold text-theme-main">{item.expectedAnswer}</span>
+                      {mode === 'fill_word' && item.question.meaning && (
+                        <span className="text-theme-subtle ml-1.5 font-normal">(Nghĩa: {item.question.meaning})</span>
+                      )}
                     </p>
                     {!item.isCorrect && item.userAnswer && (
                       <p className="text-[11px] text-rose-700 dark:text-rose-400 font-semibold">
@@ -665,10 +700,18 @@ export default function FillMeaningPracticePage() {
           )}
 
           {/* Context Example sentence */}
-          {currentQ.example_en && (
-            <div className="max-w-md mx-auto p-3.5 rounded-2xl bg-input-theme border border-theme-subtle text-xs sm:text-sm italic text-theme-muted font-medium mt-3">
-              "{currentQ.example_en}"
-            </div>
+          {mode === 'fill_word' ? (
+            currentQ.example_vi ? (
+              <div className="max-w-md mx-auto p-3.5 rounded-2xl bg-input-theme border border-theme-subtle text-xs sm:text-sm italic text-theme-muted font-medium mt-3">
+                "{currentQ.example_vi}"
+              </div>
+            ) : null
+          ) : (
+            currentQ.example_en ? (
+              <div className="max-w-md mx-auto p-3.5 rounded-2xl bg-input-theme border border-theme-subtle text-xs sm:text-sm italic text-theme-muted font-medium mt-3">
+                "{currentQ.example_en}"
+              </div>
+            ) : null
           )}
         </div>
 
@@ -709,9 +752,13 @@ export default function FillMeaningPracticePage() {
               <input
                 ref={inputRef}
                 type="text"
-                disabled={checkedResult !== null}
+                readOnly={checkedResult !== null}
                 value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
+                onChange={(e) => {
+                  if (checkedResult === null) {
+                    setUserAnswer(e.target.value);
+                  }
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder={
                   mode === 'fill_meaning'
@@ -721,8 +768,8 @@ export default function FillMeaningPracticePage() {
                 className={`w-full px-5 py-3.5 bg-input-theme border-2 rounded-2xl text-base text-theme-main placeholder:text-theme-subtle font-semibold focus:outline-none transition-all shadow-xs ${
                   checkedResult
                     ? checkedResult.is_correct
-                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-                      : 'border-rose-500 bg-rose-500/10 text-rose-800 dark:text-rose-300'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 cursor-default'
+                      : 'border-rose-500 bg-rose-500/10 text-rose-800 dark:text-rose-300 cursor-default'
                     : 'border-theme focus:border-purple-500'
                 }`}
               />
@@ -764,13 +811,22 @@ export default function FillMeaningPracticePage() {
               ) : (
                 <XCircle className="w-6 h-6 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
               )}
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <p className="text-sm font-bold">
                   {checkedResult.is_correct ? 'Chính xác! 🎉' : 'Chưa chính xác!'}
                 </p>
-                <p className="text-xs text-theme-muted">
-                  Đáp án chuẩn: <span className="font-extrabold text-theme-main">{checkedResult.expected_answer}</span>
-                </p>
+                <div className="flex items-center space-x-2 text-xs text-theme-muted">
+                  <span>Đáp án chuẩn:</span>
+                  <span className="font-extrabold text-theme-main text-sm">{checkedResult.expected_answer}</span>
+                  {mode === 'fill_word' && checkedResult.expected_answer && (
+                    <TTSButton text={checkedResult.expected_answer} size={16} className="p-1 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 rounded-lg" />
+                  )}
+                </div>
+                {mode === 'fill_word' && currentQ.example_en && (
+                  <p className="text-xs italic text-theme-muted pt-1 border-t border-theme-subtle/50 mt-1">
+                    Ví dụ tiếng Anh: "{currentQ.example_en}"
+                  </p>
+                )}
                 {checkedResult.note && (
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium pt-1">💡 {checkedResult.note}</p>
                 )}
