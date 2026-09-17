@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { stats, refreshUser } = useAuth();
   const [folders, setFolders] = useState([]);
+  const [allFolderData, setAllFolderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   
@@ -32,8 +33,12 @@ export default function DashboardPage() {
   async function loadFolders() {
     try {
       setLoading(true);
-      const data = await api.folders.getAll();
-      setFolders(data);
+      const [foldersData, allData] = await Promise.all([
+        api.folders.getAll(),
+        api.folders.getById('all').catch(() => null)
+      ]);
+      setFolders(foldersData || []);
+      if (allData) setAllFolderData(allData);
     } catch (err) {
       console.error('Failed to load folders:', err);
     } finally {
@@ -56,7 +61,7 @@ export default function DashboardPage() {
     try {
       setIsDeleting(true);
       await api.folders.delete(folderToDelete.id);
-      showToast(`Đã xóa thư mục "${folderToDelete.name}"`);
+      showToast(`Đã xóa thư mục "${folderToDelete.name}". Toàn bộ từ vựng vẫn được lưu giữ an toàn trong Tất cả từ vựng.`);
       setFolderToDelete(null);
       await loadFolders();
       refreshUser?.();
@@ -144,10 +149,22 @@ export default function DashboardPage() {
     (f.description && f.description.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const totalWords = folders.reduce((sum, f) => sum + (f.card_count || 0), 0);
-  const masteredWords = folders.reduce((sum, f) => sum + (f.mastered_count || 0), 0);
-  const learningWords = folders.reduce((sum, f) => sum + (f.learning_count || 0), 0);
-  const unmasteredWords = folders.reduce((sum, f) => sum + (f.unmastered_count !== undefined ? f.unmastered_count : ((f.card_count || 0) - (f.mastered_count || 0))), 0);
+  const totalWords = allFolderData?.card_count !== undefined 
+    ? allFolderData.card_count 
+    : (stats?.total_cards !== undefined ? stats.total_cards : folders.reduce((sum, f) => sum + (f.card_count || 0), 0));
+
+  const masteredWords = allFolderData?.mastered_count !== undefined 
+    ? allFolderData.mastered_count 
+    : (stats?.mastered_cards !== undefined ? stats.mastered_cards : folders.reduce((sum, f) => sum + (f.mastered_count || 0), 0));
+
+  const learningWords = allFolderData?.learning_count !== undefined 
+    ? allFolderData.learning_count 
+    : (stats?.learning_cards !== undefined ? stats.learning_cards : folders.reduce((sum, f) => sum + (f.learning_count || 0), 0));
+
+  const unmasteredWords = allFolderData?.unmastered_count !== undefined 
+    ? allFolderData.unmastered_count 
+    : (stats?.unmastered_cards !== undefined ? stats.unmastered_cards : folders.reduce((sum, f) => sum + (f.unmastered_count !== undefined ? f.unmastered_count : ((f.card_count || 0) - (f.mastered_count || 0))), 0));
+
   const masteryPercentage = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
 
   const matchesAllFolder = !search || 'tất cả từ vựng kho tổng hợp'.includes(search.toLowerCase()) || 'all'.includes(search.toLowerCase());
@@ -477,7 +494,7 @@ export default function DashboardPage() {
         title="Xác nhận xóa thư mục"
         message={
           <span>
-            Bạn có chắc chắn muốn xóa thư mục <strong className="text-theme-main font-bold">"{folderToDelete?.name}"</strong> cùng toàn bộ <span className="text-amber-400 font-bold">{folderToDelete?.card_count || 0} từ vựng</span> bên trong? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa thư mục <strong className="text-theme-main font-bold">"{folderToDelete?.name}"</strong>? Toàn bộ <span className="text-emerald-600 dark:text-emerald-400 font-bold">{folderToDelete?.card_count || 0} từ vựng</span> bên trong sẽ <strong className="text-emerald-600 dark:text-emerald-400 font-bold">vẫn được lưu giữ an toàn</strong> trong thư mục <strong className="text-indigo-600 dark:text-indigo-400 font-bold">"Tất cả từ vựng"</strong>.
           </span>
         }
         confirmText="Xác nhận xóa"

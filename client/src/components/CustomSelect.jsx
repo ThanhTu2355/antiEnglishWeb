@@ -47,7 +47,7 @@ export default function CustomSelect({
   }[size] || 'px-3.5 py-2.5 text-sm rounded-2xl';
 
   return (
-    <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>
+    <div className={`relative inline-block text-left ${isOpen ? 'z-50' : 'z-10'} ${className}`} ref={dropdownRef}>
       <button
         type="button"
         disabled={disabled}

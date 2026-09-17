@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, UploadCloud, Sparkles, Check } from 'lucide-react';
+import { X, UploadCloud, Sparkles, Check, Folder } from 'lucide-react';
 import { api } from '../api/client';
 import CustomSelect from './CustomSelect';
 import { CEFR_LEVELS } from '../utils/levels';
@@ -166,7 +166,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported,
               <CustomSelect
                 value={selectedFolderId}
                 onChange={setSelectedFolderId}
-                options={folders.map(f => ({ value: f.id, label: f.name }))}
+                options={folders.map(f => ({ value: f.id, label: f.name, icon: Folder, iconColor: 'text-amber-500' }))}
                 className="w-full"
               />
             </div>

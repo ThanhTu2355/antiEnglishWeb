@@ -4,7 +4,8 @@ const cardSchema = new mongoose.Schema({
   folder_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Folder',
-    required: true,
+    required: false,
+    default: null,
     index: true
   },
   user_id: {
@@ -71,6 +72,10 @@ cardSchema.set('toJSON', {
       ret.folder_id = ret.folder_id._id.toString();
     } else if (ret.folder_id) {
       ret.folder_id = ret.folder_id.toString();
+      ret.folder_name = null;
+    } else {
+      ret.folder_id = null;
+      ret.folder_name = null;
     }
     delete ret.__v;
     return ret;
@@ -87,6 +92,10 @@ cardSchema.set('toObject', {
       ret.folder_id = ret.folder_id._id.toString();
     } else if (ret.folder_id) {
       ret.folder_id = ret.folder_id.toString();
+      ret.folder_name = null;
+    } else {
+      ret.folder_id = null;
+      ret.folder_name = null;
     }
     delete ret.__v;
     return ret;

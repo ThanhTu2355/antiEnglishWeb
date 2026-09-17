@@ -410,19 +410,29 @@ export default function FolderDetailPage() {
                       <span className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-tag-theme text-theme-muted border border-theme-subtle leading-none shrink-0">
                         {card.part_of_speech || 'noun'}
                       </span>
-                      {(folder.is_all_folder || folderId === 'all') && card.folder_name && (
-                        <span 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const targetFId = typeof card.folder_id === 'object' ? (card.folder_id?.id || card.folder_id?._id) : card.folder_id;
-                            if (targetFId) navigate(`/folders/${targetFId}`);
-                          }}
-                          title={`Thuộc thư mục: ${card.folder_name} (Bấm để xem thư mục này)`}
-                          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors cursor-pointer gap-1 shrink-0 leading-none"
-                        >
-                          <Folder className="w-3 h-3 shrink-0" />
-                          <span className="truncate max-w-[120px]">{card.folder_name}</span>
-                        </span>
+                      {(folder.is_all_folder || folderId === 'all') && (
+                        card.folder_name ? (
+                          <span 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetFId = typeof card.folder_id === 'object' ? (card.folder_id?.id || card.folder_id?._id) : card.folder_id;
+                              if (targetFId) navigate(`/folders/${targetFId}`);
+                            }}
+                            title={`Thuộc thư mục: ${card.folder_name} (Bấm để xem thư mục này)`}
+                            className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors cursor-pointer gap-1 shrink-0 leading-none"
+                          >
+                            <Folder className="w-3 h-3 shrink-0" />
+                            <span className="truncate max-w-[120px]">{card.folder_name}</span>
+                          </span>
+                        ) : (
+                          <span 
+                            title="Từ vựng này thuộc Kho tổng (dùng chung cho toàn bộ ứng dụng)"
+                            className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 shrink-0 leading-none"
+                          >
+                            <Layers className="w-3 h-3 shrink-0" />
+                            <span>Kho tổng</span>
+                          </span>
+                        )
                       )}
                     </div>
 

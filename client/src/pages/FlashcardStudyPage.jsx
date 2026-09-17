@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, RotateCw, Volume2, Shuffle, Check, X, 
-  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock
+  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock, ArrowLeftRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
@@ -28,6 +28,7 @@ export default function FlashcardStudyPage() {
   const [studyDone, setStudyDone] = useState(false);
   const [masteredCount, setMasteredCount] = useState(0);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [studyDirection, setStudyDirection] = useState('forward'); // 'forward' (EN -> VI) | 'reverse' (VI -> EN)
 
   function speakWord(text) {
     if (!text || !('speechSynthesis' in window)) return;
@@ -376,61 +377,74 @@ export default function FlashcardStudyPage() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in transition-colors duration-200">
+    <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in transition-colors duration-200">
       {/* Top Header Controls */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-          <button
-            onClick={handleBackClick}
-            className="p-2.5 bg-surface hover:bg-surface-hover text-theme-muted rounded-xl border border-theme shadow-xs transition-colors cursor-pointer shrink-0"
-            title="Quay lại Trang chủ"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+      <div className="flex flex-wrap items-center justify-center gap-2 relative z-40 py-1">
+        <button
+          onClick={handleBackClick}
+          className="p-2.5 bg-surface hover:bg-surface-hover text-theme-muted rounded-2xl border border-theme shadow-xs transition-colors cursor-pointer shrink-0"
+          title="Quay lại Trang chủ"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
 
-          {/* Folder selector */}
-          <CustomSelect
-            value={selectedFolderId}
-            onChange={(val) => {
-              setSelectedFolderId(val);
-              navigate(val === 'all' ? '/flashcards' : `/flashcards/${val}`);
-            }}
-            options={folderOptions}
-            className="shrink-0 max-w-[180px] sm:max-w-xs"
-          />
+        {/* Folder selector */}
+        <CustomSelect
+          value={selectedFolderId}
+          onChange={(val) => {
+            setSelectedFolderId(val);
+            navigate(val === 'all' ? '/flashcards' : `/flashcards/${val}`);
+          }}
+          options={folderOptions}
+          className="shrink-0"
+        />
 
-          {/* Level selector */}
-          <CustomSelect
-            value={selectedLevel}
-            onChange={setSelectedLevel}
-            options={levelOptions}
-            className="shrink-0"
-          />
+        {/* Level selector */}
+        <CustomSelect
+          value={selectedLevel}
+          onChange={setSelectedLevel}
+          options={levelOptions}
+          className="shrink-0"
+        />
 
-          {/* Status selector */}
-          <CustomSelect
-            value={selectedStatus}
-            onChange={setSelectedStatus}
-            options={statusOptions}
-            className="shrink-0"
-          />
-        </div>
+        {/* Status selector */}
+        <CustomSelect
+          value={selectedStatus}
+          onChange={setSelectedStatus}
+          options={statusOptions}
+          className="shrink-0"
+        />
 
-        {/* Action icons */}
-        <div className="flex items-center space-x-2 shrink-0 self-end md:self-auto">
-          <button
-            onClick={handleShuffle}
-            title="Xáo trộn thứ tự thẻ"
-            className="px-3.5 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap"
-          >
-            <Shuffle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>Xáo trộn</span>
-          </button>
-        </div>
+        {/* Study direction toggle */}
+        <button
+          onClick={() => {
+            setStudyDirection(prev => prev === 'forward' ? 'reverse' : 'forward');
+            setIsFlipped(false);
+          }}
+          title={studyDirection === 'forward' ? 'Đang học Xuôi (Anh ➔ Việt). Bấm để chuyển sang Học Ngược (Việt ➔ Anh)' : 'Đang học Ngược (Việt ➔ Anh). Bấm để chuyển sang Học Xuôi (Anh ➔ Việt)'}
+          className={`px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer border shadow-xs whitespace-nowrap shrink-0 ${
+            studyDirection === 'reverse'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25'
+              : 'bg-surface hover:bg-surface-hover text-theme-main border-theme'
+          }`}
+        >
+          <ArrowLeftRight className={`w-4 h-4 ${studyDirection === 'reverse' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
+          <span>{studyDirection === 'forward' ? 'Xuôi (Anh ➔ Việt)' : 'Ngược (Việt ➔ Anh)'}</span>
+        </button>
+
+        {/* Shuffle button */}
+        <button
+          onClick={handleShuffle}
+          title="Xáo trộn thứ tự thẻ"
+          className="px-3.5 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap shrink-0"
+        >
+          <Shuffle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span>Xáo trộn</span>
+        </button>
       </div>
 
       {/* Progress Bar */}
-      <div className="space-y-1.5">
+      <div className="max-w-2xl mx-auto space-y-1.5">
         <div className="flex justify-between text-xs font-bold text-theme-subtle">
           <span>Tiến độ học</span>
           <span className="text-indigo-600 dark:text-indigo-400">Thẻ {currentIndex + 1} / {cards.length} ({progressPercent}%)</span>
@@ -451,144 +465,304 @@ export default function FlashcardStudyPage() {
             isFlipped ? 'rotate-y-180' : ''
           }`}
         >
-          {/* FRONT SIDE (English Word) */}
-          <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
-            {/* Top row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
-                  {getLevelBadge(currentCard.level).name}
-                </span>
-                <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
-                  {currentCard.part_of_speech || 'Từ vựng'}
-                </span>
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                  currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
-                  currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
-                  currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
-                  'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
-                }`}>
-                  {
-                    currentCard.status === 'mastered' ? 'Đã thuộc' :
-                    currentCard.status === 'learning' ? 'Đang học' :
-                    currentCard.status === 'unmastered' ? 'Chưa thuộc' :
-                    'Từ mới'
-                  }
-                </span>
-              </div>
+          {studyDirection === 'forward' ? (
+            /* =================== CHẾ ĐỘ XUÔI: EN ➔ VI =================== */
+            <>
+              {/* FRONT SIDE (English Word) */}
+              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
+                {/* Top row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                      {getLevelBadge(currentCard.level).name}
+                    </span>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
+                      {currentCard.part_of_speech || 'Từ vựng'}
+                    </span>
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                      currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                      currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                      currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                      'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                    }`}>
+                      {
+                        currentCard.status === 'mastered' ? 'Đã thuộc' :
+                        currentCard.status === 'learning' ? 'Đang học' :
+                        currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                        'Từ mới'
+                      }
+                    </span>
+                  </div>
 
-              <div onClick={(e) => e.stopPropagation()}>
-                <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
-              </div>
-            </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
+                  </div>
+                </div>
 
-            {/* Center: Main Word */}
-            <div className="text-center my-auto space-y-3">
-              <h2 className="text-4xl sm:text-5xl font-black text-theme-main tracking-tight">
-                {currentCard.word}
-              </h2>
-              {currentCard.phonetic && (
-                <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
-                  {currentCard.phonetic}
-                </p>
-              )}
-            </div>
-
-            {/* Bottom hint */}
-            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
-              <span className="flex items-center gap-1">
-                <span>Bấm thẻ hoặc</span>
-                <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">Space</kbd>
-                <span>xem nghĩa</span>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
-                <span>nghe đọc</span>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <span>Phím</span>
-                <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
-                <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
-                <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
-                <span>đánh giá</span>
-              </span>
-            </div>
-          </div>
-
-          {/* BACK SIDE (Vietnamese Meaning & Context) */}
-          <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl">
-            {/* Top row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
-                  {getLevelBadge(currentCard.level).name}
-                </span>
-                <span className="text-base font-extrabold text-theme-main">{currentCard.word}</span>
-                {currentCard.phonetic && (
-                  <span className="text-xs font-mono text-theme-subtle font-semibold">({currentCard.phonetic})</span>
-                )}
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                  currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
-                  currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
-                  currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
-                  'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
-                }`}>
-                  {
-                    currentCard.status === 'mastered' ? 'Đã thuộc' :
-                    currentCard.status === 'learning' ? 'Đang học' :
-                    currentCard.status === 'unmastered' ? 'Chưa thuộc' :
-                    'Từ mới'
-                  }
-                </span>
-              </div>
-              <div onClick={(e) => e.stopPropagation()}>
-                <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
-              </div>
-            </div>
-
-            {/* Center: Vietnamese Meaning */}
-            <div className="text-center my-auto space-y-4">
-              <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 px-6 py-3.5 rounded-2xl shadow-xs">
-                <p className="text-2xl sm:text-3xl font-black text-indigo-400 dark:text-indigo-300">
-                  {currentCard.meaning}
-                </p>
-              </div>
-
-              {/* Example sentence */}
-              {currentCard.example_en && (
-                <div className="max-w-md mx-auto space-y-1 bg-input-theme/80 p-4 rounded-2xl border border-theme-subtle shadow-xs">
-                  <p className="text-xs sm:text-sm italic text-theme-main font-medium">
-                    "{currentCard.example_en}"
-                  </p>
-                  {currentCard.example_vi && (
-                    <p className="text-xs text-theme-subtle">
-                      {currentCard.example_vi}
+                {/* Center: Main Word */}
+                <div className="text-center my-auto space-y-3">
+                  <h2 className="text-4xl sm:text-5xl font-black text-theme-main tracking-tight">
+                    {currentCard.word}
+                  </h2>
+                  {currentCard.phonetic && (
+                    <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
+                      {currentCard.phonetic}
                     </p>
                   )}
                 </div>
-              )}
 
-              {/* Note */}
-              {currentCard.note && (
-                <p className="text-xs text-amber-900 dark:text-amber-300 font-semibold bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30 inline-block">
-                  💡 {currentCard.note}
-                </p>
-              )}
-            </div>
+                {/* Bottom hint */}
+                <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
+                  <span className="flex items-center gap-1">
+                    <span>Bấm thẻ hoặc</span>
+                    <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">Space</kbd>
+                    <span>xem nghĩa</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                    <span>nghe đọc</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span>Phím</span>
+                    <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <span>đánh giá</span>
+                  </span>
+                </div>
+              </div>
 
-            {/* Bottom hint */}
-            <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
-              <span>Bấm để lật lại mặt trước</span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <span>Phím</span>
-                <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
-                <span>nghe đọc</span>
-              </span>
-            </div>
-          </div>
+              {/* BACK SIDE (Vietnamese Meaning & Context) */}
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl">
+                {/* Top row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                      {getLevelBadge(currentCard.level).name}
+                    </span>
+                    <span className="text-base font-extrabold text-theme-main">{currentCard.word}</span>
+                    {currentCard.phonetic && (
+                      <span className="text-xs font-mono text-theme-subtle font-semibold">({currentCard.phonetic})</span>
+                    )}
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                      currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                      currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                      currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                      'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                    }`}>
+                      {
+                        currentCard.status === 'mastered' ? 'Đã thuộc' :
+                        currentCard.status === 'learning' ? 'Đang học' :
+                        currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                        'Từ mới'
+                      }
+                    </span>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
+                  </div>
+                </div>
+
+                {/* Center: Vietnamese Meaning */}
+                <div className="text-center my-auto space-y-4">
+                  <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 px-6 py-3.5 rounded-2xl shadow-xs">
+                    <p className="text-2xl sm:text-3xl font-black text-indigo-600 dark:text-indigo-300">
+                      {currentCard.meaning}
+                    </p>
+                  </div>
+
+                  {/* Example sentence */}
+                  {currentCard.example_en && (
+                    <div className="max-w-md mx-auto space-y-1 bg-input-theme/80 p-4 rounded-2xl border border-theme-subtle shadow-xs">
+                      <p className="text-xs sm:text-sm italic text-theme-main font-medium">
+                        "{currentCard.example_en}"
+                      </p>
+                      {currentCard.example_vi && (
+                        <p className="text-xs text-theme-subtle">
+                          {currentCard.example_vi}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Note */}
+                  {currentCard.note && (
+                    <p className="text-xs text-amber-900 dark:text-amber-300 font-semibold bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30 inline-block">
+                      💡 {currentCard.note}
+                    </p>
+                  )}
+                </div>
+
+                {/* Bottom hint */}
+                <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
+                  <span>Bấm để lật lại mặt trước</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span>Phím</span>
+                    <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                    <span>nghe đọc</span>
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* =================== CHẾ ĐỘ NGƯỢC: VI ➔ EN =================== */
+            <>
+              {/* FRONT SIDE (Vietnamese Meaning) */}
+              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
+                {/* Top row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                      {getLevelBadge(currentCard.level).name}
+                    </span>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
+                      {currentCard.part_of_speech || 'Từ vựng'}
+                    </span>
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                      currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                      currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                      currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                      'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                    }`}>
+                      {
+                        currentCard.status === 'mastered' ? 'Đã thuộc' :
+                        currentCard.status === 'learning' ? 'Đang học' :
+                        currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                        'Từ mới'
+                      }
+                    </span>
+                  </div>
+
+                  <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">
+                    Học ngược: VI ➔ EN
+                  </span>
+                </div>
+
+                {/* Center: Vietnamese Meaning & Vietnamese context */}
+                <div className="text-center my-auto space-y-4">
+                  <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 px-6 py-3.5 rounded-2xl shadow-xs">
+                    <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-indigo-600 dark:text-indigo-300">
+                      {currentCard.meaning}
+                    </p>
+                  </div>
+
+                  {/* Vietnamese Example as context prompt if available */}
+                  {currentCard.example_vi && (
+                    <div className="max-w-md mx-auto bg-input-theme/80 p-3.5 rounded-2xl border border-theme-subtle shadow-xs">
+                      <p className="text-[11px] font-bold text-theme-subtle mb-1 uppercase tracking-wider">
+                        Ngữ cảnh minh họa:
+                      </p>
+                      <p className="text-xs sm:text-sm text-theme-main font-medium italic">
+                        "{currentCard.example_vi}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom hint */}
+                <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
+                  <span className="flex items-center gap-1">
+                    <span>Bấm thẻ hoặc</span>
+                    <kbd className="px-2 py-0.5 bg-input-theme border border-theme rounded text-theme-main font-mono text-[11px] font-bold">Space</kbd>
+                    <span>xem từ tiếng Anh</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span>Phím</span>
+                    <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <span>đánh giá</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* BACK SIDE (English Word Revealed & Details) */}
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl">
+                {/* Top row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                      {getLevelBadge(currentCard.level).name}
+                    </span>
+                    <span className="text-xs font-bold text-theme-subtle truncate max-w-[150px] sm:max-w-[200px]" title={currentCard.meaning}>
+                      {currentCard.meaning}
+                    </span>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                      currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
+                      currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
+                      currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
+                      'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
+                    }`}>
+                      {
+                        currentCard.status === 'mastered' ? 'Đã thuộc' :
+                        currentCard.status === 'learning' ? 'Đang học' :
+                        currentCard.status === 'unmastered' ? 'Chưa thuộc' :
+                        'Từ mới'
+                      }
+                    </span>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
+                  </div>
+                </div>
+
+                {/* Center: Revealed English Word & IPA & Examples */}
+                <div className="text-center my-auto space-y-3">
+                  <h2 className="text-4xl sm:text-5xl font-black text-theme-main tracking-tight">
+                    {currentCard.word}
+                  </h2>
+                  {currentCard.phonetic && (
+                    <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
+                      {currentCard.phonetic}
+                    </p>
+                  )}
+
+                  {/* Example sentence */}
+                  {currentCard.example_en && (
+                    <div className="max-w-md mx-auto space-y-1 bg-input-theme/80 p-3.5 rounded-2xl border border-theme-subtle shadow-xs text-left">
+                      <p className="text-xs sm:text-sm italic text-theme-main font-medium">
+                        "{currentCard.example_en}"
+                      </p>
+                      {currentCard.example_vi && (
+                        <p className="text-xs text-theme-subtle">
+                          {currentCard.example_vi}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Note */}
+                  {currentCard.note && (
+                    <p className="text-xs text-amber-900 dark:text-amber-300 font-semibold bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30 inline-block">
+                      💡 {currentCard.note}
+                    </p>
+                  )}
+                </div>
+
+                {/* Bottom hint */}
+                <div className="text-center text-xs text-theme-subtle font-medium flex items-center justify-center flex-wrap gap-2">
+                  <span>Bấm để lật lại</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-2 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">M</kbd>
+                    <span>nghe đọc</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span>Phím</span>
+                    <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <span>đánh giá</span>
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

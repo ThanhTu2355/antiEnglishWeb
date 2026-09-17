@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, BookPlus, Sparkles } from 'lucide-react';
+import { X, BookPlus, Sparkles, Folder, Layers } from 'lucide-react';
 import { api } from '../api/client';
 import TTSButton from './TTSButton';
 import CustomSelect from './CustomSelect';
@@ -106,14 +106,12 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setLoading(true);
       setError('');
 
-      const finalFolderId = (folderId && folderId !== 'all') ? folderId : (cardToEdit?.folder_id || selectedFolderId);
-      if (!finalFolderId) {
-        setError('Vui lòng chọn thư mục để lưu từ vựng');
-        return;
-      }
+      const finalFolderId = (folderId && folderId !== 'all') 
+        ? folderId 
+        : (selectedFolderId || (cardToEdit && cardToEdit.folder_id ? cardToEdit.folder_id : null));
 
       const payload = {
-        folder_id: finalFolderId,
+        folder_id: finalFolderId || null,
         word: word.trim(),
         phonetic: phonetic.trim(),
         meaning: meaning.trim(),
@@ -197,16 +195,19 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
             </div>
           )}
 
-          {/* Target Folder Selector (when adding from All-Words folder) */}
-          {(!folderId || folderId === 'all') && !cardToEdit && (
+          {/* Target Folder Selector (when adding or editing from All-Words folder) */}
+          {(!folderId || folderId === 'all') && (
             <div>
               <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-1">
-                Lưu vào thư mục <span className="text-rose-600 dark:text-rose-400">*</span>
+                {cardToEdit ? 'Thư mục chứa từ' : 'Lưu vào thư mục'}
               </label>
               <CustomSelect
-                value={selectedFolderId}
+                value={selectedFolderId || ''}
                 onChange={setSelectedFolderId}
-                options={folders.map(f => ({ value: f.id, label: f.name }))}
+                options={[
+                  { value: '', label: 'Kho tổng', icon: Layers, iconColor: 'text-indigo-500' },
+                  ...folders.map(f => ({ value: f.id, label: f.name, icon: Folder, iconColor: 'text-amber-500' }))
+                ]}
                 className="w-full"
               />
             </div>

@@ -246,10 +246,13 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy thư mục cần xóa' });
     }
 
-    // Delete cards in this folder
-    await Card.deleteMany({ folder_id: folderId, user_id: userId });
+    // Preserve cards in "Tất cả từ vựng" by detaching them from this deleted folder
+    await Card.updateMany(
+      { folder_id: folderId, user_id: userId },
+      { $set: { folder_id: null } }
+    );
 
-    res.json({ message: 'Đã xóa thư mục thành công' });
+    res.json({ message: 'Đã xóa thư mục thành công. Toàn bộ từ vựng vẫn được lưu giữ an toàn trong Tất cả từ vựng.' });
   } catch (err) {
     console.error('Delete folder error:', err);
     res.status(500).json({ error: 'Lỗi khi xóa thư mục' });

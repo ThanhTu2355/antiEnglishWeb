@@ -88,22 +88,20 @@ router.post('/', async (req, res) => {
       note = ''
     } = req.body;
 
-    if (!folder_id || !mongoose.Types.ObjectId.isValid(folder_id)) {
-      return res.status(400).json({ error: 'Vui lòng chọn thư mục hợp lệ cho từ vựng' });
-    }
-
     if (!word || !word.trim() || !meaning || !meaning.trim()) {
       return res.status(400).json({ error: 'Từ tiếng Anh và Nghĩa tiếng Việt không được để trống' });
     }
 
-    // Verify folder belongs to user
-    const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
-    if (!folder) {
-      return res.status(404).json({ error: 'Thư mục không hợp lệ' });
+    let validFolderId = null;
+    if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+      const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
+      if (folder) {
+        validFolderId = folder._id;
+      }
     }
 
     const newCard = await Card.create({
-      folder_id,
+      folder_id: validFolderId,
       user_id: userId,
       word: word.trim(),
       phonetic: phonetic.trim(),
@@ -116,7 +114,9 @@ router.post('/', async (req, res) => {
       status: ['new', 'learning', 'unmastered', 'mastered'].includes(status) ? status : 'new'
     });
 
-    await Folder.findByIdAndUpdate(folder_id, { updated_at: new Date() });
+    if (validFolderId) {
+      await Folder.findByIdAndUpdate(validFolderId, { updated_at: new Date() });
+    }
 
     res.status(201).json({
       message: 'Thêm từ vựng thành công!',
@@ -134,20 +134,23 @@ router.post('/bulk', async (req, res) => {
     const userId = req.user.id;
     const { folder_id, cards, default_level = 'B1' } = req.body;
 
-    if (!folder_id || !mongoose.Types.ObjectId.isValid(folder_id) || !Array.isArray(cards) || cards.length === 0) {
+    if (!Array.isArray(cards) || cards.length === 0) {
       return res.status(400).json({ error: 'Dữ liệu nhập hàng loạt không hợp lệ' });
     }
 
-    const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
-    if (!folder) {
-      return res.status(404).json({ error: 'Thư mục không hợp lệ' });
+    let validFolderId = null;
+    if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+      const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
+      if (folder) {
+        validFolderId = folder._id;
+      }
     }
 
     const cardsToInsert = [];
     for (const c of cards) {
       if (!c.word || !c.meaning) continue;
       cardsToInsert.push({
-        folder_id,
+        folder_id: validFolderId,
         user_id: userId,
         word: c.word.trim(),
         phonetic: (c.phonetic || '').trim(),
@@ -165,7 +168,9 @@ router.post('/bulk', async (req, res) => {
       await Card.insertMany(cardsToInsert);
     }
 
-    await Folder.findByIdAndUpdate(folder_id, { updated_at: new Date() });
+    if (validFolderId) {
+      await Folder.findByIdAndUpdate(validFolderId, { updated_at: new Date() });
+    }
 
     res.status(201).json({
       message: `Đã nhập thành công ${cardsToInsert.length} thẻ từ vựng!`,
@@ -183,6 +188,7 @@ router.put('/:id', async (req, res) => {
     const cardId = req.params.id;
     const userId = req.user.id;
     const {
+      folder_id,
       word,
       phonetic = '',
       meaning,
@@ -213,6 +219,15 @@ router.put('/:id', async (req, res) => {
       note: note.trim()
     };
     if (status) updateData.status = status;
+
+    if (folder_id !== undefined) {
+      if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+        const folder = await Folder.findOne({ _id: folder_id, user_id: userId });
+        updateData.folder_id = folder ? folder._id : null;
+      } else {
+        updateData.folder_id = null;
+      }
+    }
 
     const updated = await Card.findOneAndUpdate(
       { _id: cardId, user_id: userId },
