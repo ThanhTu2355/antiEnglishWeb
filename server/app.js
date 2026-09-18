@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const folderRoutes = require('./routes/folders');
 const cardRoutes = require('./routes/cards');
 const practiceRoutes = require('./routes/practice');
+const ttsRoutes = require('./routes/tts');
 
 const app = express();
 
@@ -36,6 +37,9 @@ app.use('/cards', cardRoutes);
 
 app.use('/api/practice', practiceRoutes);
 app.use('/practice', practiceRoutes);
+
+app.use('/api/tts', ttsRoutes);
+app.use('/tts', ttsRoutes);
 
 // Health check
 app.get(['/api/health', '/health'], (req, res) => {

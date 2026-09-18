@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import TTSButton from '../components/TTSButton';
+import { playWordAudio } from '../utils/audio';
 import CustomSelect from '../components/CustomSelect';
 import ConfirmModal from '../components/ConfirmModal';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
@@ -31,17 +32,8 @@ export default function FlashcardStudyPage() {
   const [studyDirection, setStudyDirection] = useState('forward'); // 'forward' (EN -> VI) | 'reverse' (VI -> EN)
 
   function speakWord(text) {
-    if (!text || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel')));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
-    }
-    window.speechSynthesis.speak(utterance);
+    if (!text) return;
+    playWordAudio(text, 'en');
   }
 
   useEffect(() => {
@@ -723,7 +715,7 @@ export default function FlashcardStudyPage() {
 
                   {/* Example sentence */}
                   {currentCard.example_en && (
-                    <div className="max-w-md mx-auto space-y-1 bg-input-theme/80 p-3.5 rounded-2xl border border-theme-subtle shadow-xs text-left">
+                    <div className="max-w-md mx-auto space-y-1 bg-input-theme/80 p-3.5 rounded-2xl border border-theme-subtle shadow-xs text-center">
                       <p className="text-xs sm:text-sm italic text-theme-main font-medium">
                         "{currentCard.example_en}"
                       </p>
