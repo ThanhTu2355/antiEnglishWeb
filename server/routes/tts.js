@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 
 // In-memory LRU-like audio cache for instant playback
@@ -8,14 +8,18 @@ const MAX_CACHE_ITEMS = 1000;
 router.get('/', async (req, res) => {
   try {
     const text = req.query.text;
-    const lang = req.query.lang || 'en';
+    const rawLang = req.query.lang || 'en-US';
 
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Text parameter is required' });
     }
 
     const cleanText = text.trim().slice(0, 200);
-    const cleanLang = lang.trim().slice(0, 5) || 'en';
+    // Enforce American English (en-US) for English speech
+    let cleanLang = rawLang.trim();
+    if (!cleanLang || cleanLang.toLowerCase().startsWith('en')) {
+      cleanLang = 'en-US';
+    }
     const cacheKey = `${cleanLang}:${cleanText.toLowerCase()}`;
 
     // Return from cache if available

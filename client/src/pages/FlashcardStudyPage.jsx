@@ -33,7 +33,7 @@ export default function FlashcardStudyPage() {
 
   function speakWord(text) {
     if (!text) return;
-    playWordAudio(text, 'en');
+    playWordAudio(text, 'en-US');
   }
 
   useEffect(() => {
