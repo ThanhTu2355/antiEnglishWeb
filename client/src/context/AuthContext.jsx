@@ -37,10 +37,13 @@ function getInitialAuthState() {
       return { token: null, user: null, stats: null };
     }
 
-    // Nếu đã quá 30 ngày kể từ lần hoạt động gần nhất
-    if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
-      clearAuthStorage(true);
-      return { token: null, user: null, stats: null };
+    // Nếu đã có lastActive và vượt quá 30 ngày kể từ lần hoạt động gần nhất
+    if (lastActive) {
+      const lastActiveTime = Number(lastActive);
+      if (!isNaN(lastActiveTime) && lastActiveTime > 0 && Date.now() - lastActiveTime > SESSION_TIMEOUT_MS) {
+        clearAuthStorage(true);
+        return { token: null, user: null, stats: null };
+      }
     }
 
     const savedUser = localStorage.getItem(USER_KEY);
@@ -62,6 +65,7 @@ export function AuthProvider({ children }) {
   const { user, token, stats } = authState;
 
   const [loading, setLoading] = useState(() => {
+    // Chỉ hiển thị loading nếu có token nhưng chưa tải được user từ storage
     return Boolean(authState.token && !authState.user);
   });
 
@@ -92,6 +96,46 @@ export function AuthProvider({ children }) {
     };
   }, [logout]);
 
+  // Tải thông tin người dùng và stats (dependencies rỗng để không bị tạo lại hàm)
+  const loadProfile = useCallback(async (isInitial = false) => {
+    const currentToken = localStorage.getItem(TOKEN_KEY);
+    if (!currentToken) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await api.auth.me();
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      if (data.stats) {
+        localStorage.setItem(STATS_KEY, JSON.stringify(data.stats));
+      }
+      setAuthState(prev => ({
+        ...prev,
+        token: currentToken,
+        user: data.user,
+        stats: data.stats || prev.stats
+      }));
+    } catch (err) {
+      console.error('Failed to load profile:', err);
+      // Không tự ý gọi logout() ở đây để tránh bị văng khi mất mạng hoặc lỗi server tạm thời.
+      // Nếu là lỗi 401 thì client.js đã phát event 'anti_english_session_expired' tự động logout.
+    } finally {
+      if (isInitial) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  // Khi có token, chạy loadProfile một lần duy nhất khi mount
+  useEffect(() => {
+    if (token) {
+      loadProfile(true);
+    } else {
+      setLoading(false);
+    }
+  }, [token, loadProfile]);
+
   // Kiểm tra timeout định kỳ và theo dõi tương tác người dùng
   useEffect(() => {
     if (!token) return;
@@ -110,8 +154,11 @@ export function AuthProvider({ children }) {
 
     function checkSessionExpired() {
       const lastActive = localStorage.getItem(LAST_ACTIVE_KEY);
-      if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
-        logout(true);
+      if (lastActive) {
+        const lastActiveTime = Number(lastActive);
+        if (!isNaN(lastActiveTime) && lastActiveTime > 0 && Date.now() - lastActiveTime > SESSION_TIMEOUT_MS) {
+          logout(true);
+        }
       }
     }
 
@@ -138,45 +185,6 @@ export function AuthProvider({ children }) {
     };
   }, [token, logout]);
 
-  const loadProfile = useCallback(async (isInitial = false, activeToken = token) => {
-    const currentToken = activeToken || localStorage.getItem(TOKEN_KEY);
-    if (!currentToken) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (isInitial && !user) {
-        setLoading(true);
-      }
-      const data = await api.auth.me();
-      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-      if (data.stats) {
-        localStorage.setItem(STATS_KEY, JSON.stringify(data.stats));
-      }
-      setAuthState(prev => ({
-        ...prev,
-        user: data.user,
-        stats: data.stats || prev.stats
-      }));
-    } catch (err) {
-      console.error('Failed to load profile:', err);
-      logout(true);
-    } finally {
-      if (isInitial) {
-        setLoading(false);
-      }
-    }
-  }, [token, user, logout]);
-
-  useEffect(() => {
-    if (token) {
-      loadProfile(true, token);
-    } else {
-      setLoading(false);
-    }
-  }, [token, loadProfile]);
-
   async function login(username, password) {
     const data = await api.auth.login(username, password);
     sessionStorage.removeItem(EXPIRED_KEY);
@@ -188,7 +196,8 @@ export function AuthProvider({ children }) {
       user: data.user,
       stats: null
     });
-    await loadProfile(false, data.token);
+    // Gọi cập nhật stats nền
+    loadProfile(false);
     return data;
   }
 
@@ -203,7 +212,7 @@ export function AuthProvider({ children }) {
       user: data.user,
       stats: null
     });
-    await loadProfile(false, data.token);
+    loadProfile(false);
     return data;
   }
 
