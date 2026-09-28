@@ -29,6 +29,11 @@ async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
+    if ((response.status === 401 || response.status === 403) && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/register')) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('anti_english_session_expired'));
+      }
+    }
     throw new Error(data.error || `Lỗi máy chủ (${response.status}). Vui lòng thử lại.`);
   }
 

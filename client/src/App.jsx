@@ -13,7 +13,7 @@ import FillMeaningPracticePage from './pages/FillMeaningPracticePage';
 
 // Protected layout with Navbar and nested route views
 function ProtectedLayout() {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
 
   if (loading) {
     return (
@@ -26,7 +26,7 @@ function ProtectedLayout() {
     );
   }
 
-  if (!user) {
+  if (!user || !token) {
     return <Navigate to="/login" replace />;
   }
 
@@ -50,9 +50,9 @@ function ProtectedLayout() {
 
 // Public route for login & register (redirect to home if already logged in)
 function PublicRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user && token) return <Navigate to="/" replace />;
   return children;
 }
 

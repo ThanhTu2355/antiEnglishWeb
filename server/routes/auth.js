@@ -58,7 +58,7 @@ router.post('/register', async (req, res) => {
       full_name: newUser.full_name
     };
 
-    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '30d' });
 
     res.status(201).json({
       message: 'Đăng ký thành công!',
@@ -101,7 +101,7 @@ router.post('/login', async (req, res) => {
       full_name: user.full_name || user.username
     };
 
-    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign(userData, JWT_SECRET, { expiresIn: '30d' });
 
     res.json({
       message: 'Đăng ký thành công!',

@@ -10,6 +10,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sessionExpiredNotice] = useState(() => {
+    const expired = sessionStorage.getItem('anti_english_session_expired');
+    if (expired) {
+      sessionStorage.removeItem('anti_english_session_expired');
+      return true;
+    }
+    return false;
+  });
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -48,6 +56,13 @@ export default function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
+
+          {sessionExpiredNotice && !error && (
+            <div className="p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl text-amber-700 dark:text-amber-400 text-sm font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.</span>
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold flex items-center gap-2">

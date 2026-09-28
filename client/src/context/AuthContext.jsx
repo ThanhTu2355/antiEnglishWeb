@@ -1,57 +1,98 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 
 const AuthContext = createContext(null);
 
-const SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 1 ngày (24 giờ)
+const SESSION_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000; // 30 ngày (30 * 24 giờ)
 const LAST_ACTIVE_KEY = 'anti_english_last_active';
 const TOKEN_KEY = 'anti_english_token';
+const USER_KEY = 'anti_english_user';
+const STATS_KEY = 'anti_english_stats';
 const EXPIRED_KEY = 'anti_english_session_expired';
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('anti_english_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [stats, setStats] = useState(() => {
-    try {
-      const saved = localStorage.getItem('anti_english_stats');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [token, setToken] = useState(() => {
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    if (!savedToken) return null;
-
-    const lastActive = localStorage.getItem(LAST_ACTIVE_KEY);
-    if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(LAST_ACTIVE_KEY);
-      localStorage.removeItem('anti_english_user');
-      localStorage.removeItem('anti_english_stats');
+function clearAuthStorage(isExpired = false) {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(LAST_ACTIVE_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(STATS_KEY);
+    if (isExpired) {
       sessionStorage.setItem(EXPIRED_KEY, '1');
-      return null;
+    } else {
+      sessionStorage.removeItem(EXPIRED_KEY);
     }
-    return savedToken;
-  });
+  } catch (e) {
+    console.error('Storage error:', e);
+  }
+}
+
+function getInitialAuthState() {
+  try {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const lastActive = localStorage.getItem(LAST_ACTIVE_KEY);
+
+    // Nếu không có token, dọn sạch và trả về null
+    if (!token) {
+      clearAuthStorage(false);
+      return { token: null, user: null, stats: null };
+    }
+
+    // Nếu đã quá 30 ngày kể từ lần hoạt động gần nhất
+    if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
+      clearAuthStorage(true);
+      return { token: null, user: null, stats: null };
+    }
+
+    const savedUser = localStorage.getItem(USER_KEY);
+    const savedStats = localStorage.getItem(STATS_KEY);
+
+    return {
+      token,
+      user: savedUser ? JSON.parse(savedUser) : null,
+      stats: savedStats ? JSON.parse(savedStats) : null
+    };
+  } catch {
+    clearAuthStorage(false);
+    return { token: null, user: null, stats: null };
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [authState, setAuthState] = useState(getInitialAuthState);
+  const { user, token, stats } = authState;
+
   const [loading, setLoading] = useState(() => {
-    const savedToken = localStorage.getItem(TOKEN_KEY);
-    const savedUser = localStorage.getItem('anti_english_user');
-    return Boolean(savedToken && !savedUser);
+    return Boolean(authState.token && !authState.user);
   });
 
-  // Update last activity timestamp
+  // Cập nhật timestamp hoạt động gần nhất
   function updateLastActive() {
-    localStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
+    try {
+      localStorage.setItem(LAST_ACTIVE_KEY, Date.now().toString());
+    } catch (e) {
+      console.error('Error updating last active time:', e);
+    }
   }
 
-  // Periodic check and user activity listener
+  // Đăng xuất và dọn sạch session
+  const logout = useCallback((isExpired = false) => {
+    clearAuthStorage(isExpired);
+    setAuthState({ token: null, user: null, stats: null });
+    setLoading(false);
+  }, []);
+
+  // Lắng nghe sự kiện session expired từ API client
+  useEffect(() => {
+    function handleSessionExpired() {
+      logout(true);
+    }
+    window.addEventListener('anti_english_session_expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('anti_english_session_expired', handleSessionExpired);
+    };
+  }, [logout]);
+
+  // Kiểm tra timeout định kỳ và theo dõi tương tác người dùng
   useEffect(() => {
     if (!token) return;
 
@@ -60,66 +101,94 @@ export function AuthProvider({ children }) {
     let lastWriteTime = Date.now();
     function handleUserActivity() {
       const now = Date.now();
-      // Throttle localStorage writes to at most once every 20 seconds
+      // Throttle ghi localStorage tối đa 1 lần mỗi 20 giây
       if (now - lastWriteTime > 20000) {
         lastWriteTime = now;
         updateLastActive();
       }
     }
 
-    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
-    activityEvents.forEach(evt => window.addEventListener(evt, handleUserActivity, { passive: true }));
-
-    // Periodic check every 30 seconds
-    const interval = setInterval(() => {
+    function checkSessionExpired() {
       const lastActive = localStorage.getItem(LAST_ACTIVE_KEY);
       if (lastActive && Date.now() - Number(lastActive) > SESSION_TIMEOUT_MS) {
         logout(true);
       }
-    }, 30000);
+    }
+
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    activityEvents.forEach(evt => window.addEventListener(evt, handleUserActivity, { passive: true }));
+
+    // Kiểm tra định kỳ mỗi 30 giây
+    const interval = setInterval(checkSessionExpired, 30000);
+
+    // Kiểm tra ngay lập tức khi người dùng quay lại tab trình duyệt
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionExpired();
+      }
+    };
+    window.addEventListener('focus', checkSessionExpired);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       activityEvents.forEach(evt => window.removeEventListener(evt, handleUserActivity));
       clearInterval(interval);
+      window.removeEventListener('focus', checkSessionExpired);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [token]);
+  }, [token, logout]);
 
-  useEffect(() => {
-    if (token) {
-      loadProfile(true);
-    } else {
+  const loadProfile = useCallback(async (isInitial = false, activeToken = token) => {
+    const currentToken = activeToken || localStorage.getItem(TOKEN_KEY);
+    if (!currentToken) {
       setLoading(false);
+      return;
     }
-  }, [token]);
 
-  async function loadProfile(isInitial = false) {
     try {
       if (isInitial && !user) {
         setLoading(true);
       }
       const data = await api.auth.me();
-      setUser(data.user);
-      setStats(data.stats);
-      localStorage.setItem('anti_english_user', JSON.stringify(data.user));
-      localStorage.setItem('anti_english_stats', JSON.stringify(data.stats));
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      if (data.stats) {
+        localStorage.setItem(STATS_KEY, JSON.stringify(data.stats));
+      }
+      setAuthState(prev => ({
+        ...prev,
+        user: data.user,
+        stats: data.stats || prev.stats
+      }));
     } catch (err) {
       console.error('Failed to load profile:', err);
-      logout();
+      logout(true);
     } finally {
       if (isInitial) {
         setLoading(false);
       }
     }
-  }
+  }, [token, user, logout]);
+
+  useEffect(() => {
+    if (token) {
+      loadProfile(true, token);
+    } else {
+      setLoading(false);
+    }
+  }, [token, loadProfile]);
 
   async function login(username, password) {
     const data = await api.auth.login(username, password);
     sessionStorage.removeItem(EXPIRED_KEY);
     localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     updateLastActive();
-    setToken(data.token);
-    setUser(data.user);
-    await loadProfile();
+    setAuthState({
+      token: data.token,
+      user: data.user,
+      stats: null
+    });
+    await loadProfile(false, data.token);
     return data;
   }
 
@@ -127,30 +196,19 @@ export function AuthProvider({ children }) {
     const data = await api.auth.register(username, email, password, full_name);
     sessionStorage.removeItem(EXPIRED_KEY);
     localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     updateLastActive();
-    setToken(data.token);
-    setUser(data.user);
-    await loadProfile();
+    setAuthState({
+      token: data.token,
+      user: data.user,
+      stats: null
+    });
+    await loadProfile(false, data.token);
     return data;
   }
 
   async function quickDemoLogin() {
     return login('demo', '123456');
-  }
-
-  function logout(isExpired = false) {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(LAST_ACTIVE_KEY);
-    localStorage.removeItem('anti_english_user');
-    localStorage.removeItem('anti_english_stats');
-    if (isExpired) {
-      sessionStorage.setItem(EXPIRED_KEY, '1');
-    } else {
-      sessionStorage.removeItem(EXPIRED_KEY);
-    }
-    setToken(null);
-    setUser(null);
-    setStats(null);
   }
 
   const value = {
@@ -174,6 +232,3 @@ export function AuthProvider({ children }) {
 
 export { AuthContext };
 export default AuthProvider;
-
-
-
