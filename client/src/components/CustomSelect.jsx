@@ -58,7 +58,7 @@ export default function CustomSelect({
             : 'border-theme hover:border-indigo-500 dark:hover:border-indigo-400 hover:ring-2 hover:ring-indigo-500/20 hover:bg-surface-hover hover:shadow-sm'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${buttonClassName}`}
       >
-        <div className="flex items-center gap-2 min-w-0 truncate">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden pr-1">
           {selectedOption?.icon && (
             <span className={`shrink-0 transition-colors ${selectedOption.iconColor || 'text-indigo-400'}`}>
               {React.createElement(selectedOption.icon, { className: size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4' })}
@@ -72,20 +72,22 @@ export default function CustomSelect({
           <span className="truncate text-theme-main group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors font-bold">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
           {typeof selectedOption?.count === 'number' && (
-            <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-tag-theme text-theme-muted group-hover:border-indigo-500/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 font-bold border border-theme-subtle transition-colors">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-tag-theme text-theme-muted group-hover:border-indigo-500/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 font-bold border border-theme-subtle transition-colors">
               {selectedOption.count}
             </span>
           )}
+          <ChevronDown
+            className={`w-4 h-4 text-theme-subtle shrink-0 transition-all duration-200 ${
+              isOpen 
+                ? 'rotate-180 text-indigo-600 dark:text-indigo-400' 
+                : 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-y-0.5'
+            }`}
+          />
         </div>
-
-        <ChevronDown
-          className={`w-4 h-4 text-theme-subtle shrink-0 transition-all duration-200 ${
-            isOpen 
-              ? 'rotate-180 text-indigo-600 dark:text-indigo-400' 
-              : 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:translate-y-0.5'
-          }`}
-        />
       </button>
 
       {isOpen && (

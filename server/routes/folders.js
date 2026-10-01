@@ -14,6 +14,7 @@ router.get('/', async (req, res) => {
     const folders = await Folder.find({ user_id: userId }).sort({ order: 1, updated_at: -1, _id: -1 });
 
     const folderIds = folders.map(f => f._id);
+    const now = new Date();
     const cardAgg = await Card.aggregate([
       { $match: { folder_id: { $in: folderIds } } },
       {
@@ -22,7 +23,8 @@ router.get('/', async (req, res) => {
           card_count: { $sum: 1 },
           mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
           unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
-          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
+          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
         }
       }
     ]);
@@ -39,7 +41,8 @@ router.get('/', async (req, res) => {
         card_count: s.card_count || 0,
         mastered_count: s.mastered_count || 0,
         unmastered_count: s.unmastered_count || 0,
-        learning_count: s.learning_count || 0
+        learning_count: s.learning_count || 0,
+        due_count: s.due_count || 0
       };
     });
 
@@ -54,6 +57,7 @@ router.get('/', async (req, res) => {
 router.get('/all', async (req, res) => {
   try {
     const userId = req.user.id;
+    const now = new Date();
     const cardAgg = await Card.aggregate([
       { $match: { user_id: new mongoose.Types.ObjectId(userId) } },
       {
@@ -63,7 +67,8 @@ router.get('/all', async (req, res) => {
           new_count: { $sum: { $cond: [{ $eq: ['$status', 'new'] }, 1, 0] } },
           mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
           unmastered_count: { $sum: { $cond: [{ $eq: ['$status', 'unmastered'] }, 1, 0] } },
-          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+          learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
+          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
         }
       }
     ]);
@@ -81,7 +86,8 @@ router.get('/all', async (req, res) => {
       new_count: s.new_count || 0,
       mastered_count: s.mastered_count || 0,
       unmastered_count: s.unmastered_count || 0,
-      learning_count: s.learning_count || 0
+      learning_count: s.learning_count || 0,
+      due_count: s.due_count || 0
     });
   } catch (err) {
     console.error('Get all-folder summary error:', err);
@@ -124,6 +130,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'ID thư mục không hợp lệ' });
     }
 
+    const now = new Date();
     const [folder, cardAgg] = await Promise.all([
       Folder.findOne({ _id: folderId, user_id: userId }),
       Card.aggregate([
@@ -134,7 +141,8 @@ router.get('/:id', async (req, res) => {
             card_count: { $sum: 1 },
             mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
             unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
-            learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } }
+            learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
+            due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
           }
         }
       ])
@@ -150,7 +158,8 @@ router.get('/:id', async (req, res) => {
       card_count: s.card_count || 0,
       mastered_count: s.mastered_count || 0,
       unmastered_count: s.unmastered_count || 0,
-      learning_count: s.learning_count || 0
+      learning_count: s.learning_count || 0,
+      due_count: s.due_count || 0
     });
   } catch (err) {
     console.error('Get folder detail error:', err);

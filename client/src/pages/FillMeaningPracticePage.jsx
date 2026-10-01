@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Award, CheckCircle2, XCircle, Clock, Sparkles,
   Flame, HelpCircle, ArrowRight, RotateCw, Folder, Layers
@@ -11,16 +11,20 @@ import TTSButton from '../components/TTSButton';
 import ConfirmModal from '../components/ConfirmModal';
 import CustomSelect from '../components/CustomSelect';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
+import { formatInterval } from '../utils/sm2';
 
 export default function FillMeaningPracticePage() {
   const { folderId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { refreshUser } = useAuth();
+
+  const isDueQuery = searchParams.get('due') === 'true';
 
   const [folders, setFolders] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState(folderId || 'all');
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all'); // 'all' | 'unmastered' | 'mastered'
+  const [selectedStatus, setSelectedStatus] = useState(isDueQuery ? 'due' : 'all'); // 'all' | 'due' | 'learning' | 'unmastered' | 'mastered'
   const [mode, setMode] = useState('fill_meaning'); // 'fill_meaning' | 'fill_word' | 'multiple_choice'
   const [limit, setLimit] = useState(10);
 
@@ -29,6 +33,12 @@ export default function FillMeaningPracticePage() {
       setSelectedFolderId(folderId);
     }
   }, [folderId]);
+
+  useEffect(() => {
+    if (searchParams.get('due') === 'true') {
+      setSelectedStatus('due');
+    }
+  }, [searchParams]);
 
   // Quiz state
   const [quizState, setQuizState] = useState('setup'); // 'setup' | 'playing' | 'result'
@@ -96,14 +106,17 @@ export default function FillMeaningPracticePage() {
         limit,
         folder_id: selectedFolderId === 'all' ? undefined : selectedFolderId,
         level: selectedLevel === 'all' ? undefined : selectedLevel,
-        status: selectedStatus === 'all' ? undefined : selectedStatus
+        status: (selectedStatus === 'all' || selectedStatus === 'due') ? undefined : selectedStatus,
+        due: selectedStatus === 'due' ? true : undefined
       };
 
       const res = await api.practice.getQuestions(params);
       const questionList = Array.isArray(res) ? res : (res?.questions || []);
       if (!questionList || questionList.length === 0) {
         let msg = 'Không có từ vựng nào trong thư mục này để luyện tập. Hãy thêm từ trước!';
-        if (selectedStatus === 'unmastered') {
+        if (selectedStatus === 'due') {
+          msg = '🎉 Xuất sắc! Hiện tại không có từ vựng nào đến hạn ôn tập (SRS). Hãy quay lại sau nhé!';
+        } else if (selectedStatus === 'unmastered') {
           msg = 'Tuyệt vời! Bạn không có từ vựng nào "Chưa thuộc" phù hợp với bộ lọc đã chọn.';
         } else if (selectedStatus === 'learning') {
           msg = 'Bạn hiện không có từ vựng nào ở trạng thái "Đang học" phù hợp với bộ lọc.';
@@ -363,7 +376,7 @@ export default function FillMeaningPracticePage() {
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-2">
               3. Phân loại từ vựng
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedStatus('all')}
@@ -374,6 +387,18 @@ export default function FillMeaningPracticePage() {
                 }`}
               >
                 <span>Tất cả từ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedStatus('due')}
+                className={`py-2.5 px-2 text-xs sm:text-sm font-extrabold rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  selectedStatus === 'due'
+                    ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
+                    : 'bg-surface border-theme text-amber-600 dark:text-amber-400 hover:bg-surface-hover'
+                }`}
+              >
+                <Flame className={`w-4 h-4 ${selectedStatus === 'due' ? 'text-white' : 'text-amber-500 animate-pulse'}`} />
+                <span>Đến hạn (SRS)</span>
               </button>
               <button
                 type="button"
@@ -829,6 +854,12 @@ export default function FillMeaningPracticePage() {
                 )}
                 {checkedResult.note && (
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium pt-1">💡 {checkedResult.note}</p>
+                )}
+                {checkedResult.interval !== undefined && (
+                  <p className="text-[11px] text-indigo-700 dark:text-indigo-400 font-semibold pt-1 flex items-center gap-1">
+                    <span>📅 Lần ôn tiếp theo (SRS):</span>
+                    <span className="font-bold underline">sau {formatInterval(checkedResult.interval)}</span>
+                  </p>
                 )}
               </div>
             </div>

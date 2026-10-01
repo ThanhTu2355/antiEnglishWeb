@@ -59,8 +59,32 @@ const cardSchema = new mongoose.Schema({
   created_at: {
     type: Date,
     default: Date.now
+  },
+  // Spaced Repetition System (SM-2) fields
+  repetitions: {
+    type: Number,
+    default: 0
+  },
+  interval: {
+    type: Number,
+    default: 0 // số ngày đến lần ôn tập tiếp theo
+  },
+  ease_factor: {
+    type: Number,
+    default: 2.5
+  },
+  next_review_date: {
+    type: Date,
+    default: Date.now,
+    index: true
+  },
+  last_reviewed_at: {
+    type: Date,
+    default: null
   }
 });
+
+cardSchema.index({ user_id: 1, next_review_date: 1 });
 
 cardSchema.set('toJSON', {
   virtuals: true,

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FolderPlus, GitMerge, BookOpen, Award, Layers, Sparkles, 
-  Edit3, Trash2, CheckCircle2, Search
+  Edit3, Trash2, CheckCircle2, Search, Flame
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
@@ -28,6 +28,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadFolders();
+    refreshUser?.();
   }, []);
 
   async function loadFolders() {
@@ -165,6 +166,10 @@ export default function DashboardPage() {
     ? allFolderData.unmastered_count 
     : (stats?.unmastered_cards !== undefined ? stats.unmastered_cards : folders.reduce((sum, f) => sum + (f.unmastered_count !== undefined ? f.unmastered_count : ((f.card_count || 0) - (f.mastered_count || 0))), 0));
 
+  const dueWords = stats?.due_cards !== undefined
+    ? stats.due_cards
+    : (allFolderData?.due_count !== undefined ? allFolderData.due_count : folders.reduce((sum, f) => sum + (f.due_count || 0), 0));
+
   const masteryPercentage = totalWords > 0 ? Math.round((masteredWords / totalWords) * 100) : 0;
 
   const matchesAllFolder = !search || 'tất cả từ vựng kho tổng hợp'.includes(search.toLowerCase()) || 'all'.includes(search.toLowerCase());
@@ -190,13 +195,10 @@ export default function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Quản lý Từ vựng & Luyện tập
             </h1>
-            <p className="text-sm text-indigo-200/90 mt-1 max-w-xl">
-              Học theo phương pháp lặp lại ngắt quãng với Flashcard 3D sinh động và bài tập Điền nghĩa chuẩn xác.
-            </p>
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full xl:w-auto shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-3 w-full xl:w-auto shrink-0">
             <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
               <span className="text-xs text-indigo-100 font-semibold block">Thư mục</span>
               <span className="text-2xl font-black text-white mt-1 block">{folders.length}</span>
@@ -205,6 +207,20 @@ export default function DashboardPage() {
             <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
               <span className="text-xs text-amber-200 font-semibold block">Tổng từ</span>
               <span className="text-2xl font-black text-amber-300 mt-1 block">{totalWords}</span>
+            </div>
+
+            <div 
+              onClick={() => navigate('/flashcards?due=true')}
+              title="Bấm để ôn tập các từ đến hạn theo thuật toán SM-2"
+              className="bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-amber-400/40 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-all cursor-pointer group col-span-2 sm:col-span-1"
+            >
+              <span className="text-xs text-amber-300 font-bold flex items-center justify-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                Cần ôn (SRS)
+              </span>
+              <span className="text-2xl font-black text-amber-300 mt-1 block group-hover:scale-110 transition-transform">
+                {dueWords}
+              </span>
             </div>
 
             <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors">
@@ -233,10 +249,78 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Spaced Repetition (SRS) Callout Widget */}
+      <div className={`relative overflow-hidden rounded-3xl p-6 sm:p-7 border shadow-lg transition-all ${
+        dueWords > 0 
+          ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 dark:from-amber-950/25 dark:via-orange-950/25 dark:to-rose-950/25 border-amber-500/30' 
+          : 'bg-surface border-theme'
+      }`}>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex items-start space-x-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-md ${
+              dueWords > 0 
+                ? 'bg-gradient-to-tr from-amber-500 to-rose-500 text-white shadow-amber-500/20' 
+                : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
+            }`}>
+              <Flame className={`w-6 h-6 ${dueWords > 0 ? 'animate-bounce' : ''}`} />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Ôn tập ngắt quãng
+                </span>
+                {dueWords > 0 ? (
+                  <span className="px-2 py-0.5 text-[11px] font-black rounded-full bg-rose-500 text-white animate-pulse">
+                    Đến hạn hôm nay
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                    Đã hoàn thành
+                  </span>
+                )}
+              </div>
+
+              <h2 className="text-lg sm:text-xl font-black text-theme-main">
+                {dueWords > 0 
+                  ? `Bạn có ${dueWords} từ vựng đã đến thời điểm vàng cần ôn tập!` 
+                  : 'Tuyệt vời! Toàn bộ từ vựng đều đang trong chu kỳ ghi nhớ tốt.'}
+              </h2>
+              <p className="text-xs sm:text-sm text-theme-muted mt-1 max-w-2xl">
+                {dueWords > 0 
+                  ? 'Thuật toán SuperMemo 2 (SM-2) tính toán chu kỳ quên tự nhiên của não bộ. Ôn lại ngay bây giờ sẽ giúp kích hoạt trí nhớ dài hạn vĩnh viễn!'
+                  : 'Hệ thống tự động nhắc nhở khi đến chu kỳ ôn tập tiếp theo. Bạn có thể luyện tập tự do bất kỳ lúc nào.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => navigate('/flashcards?due=true')}
+              disabled={dueWords === 0}
+              className="flex-1 md:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Ôn Flashcard ({dueWords})</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/practice?due=true')}
+              disabled={dueWords === 0}
+              className="flex-1 md:flex-none px-5 py-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main font-bold text-xs sm:text-sm border border-theme shadow-xs flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              <Award className="w-4 h-4" />
+              <span>Luyện Điền nghĩa</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Action Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search */}
-        <div className="relative w-full sm:w-80">
+        <div className="relative w-full sm:w-[380px] lg:w-[420px]">
           <Search className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
           <input
             type="text"
@@ -319,9 +403,17 @@ export default function DashboardPage() {
                       <h3 className="font-extrabold text-theme-main text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         Tất cả từ vựng
                       </h3>
-                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">
-                        {totalWords} từ • {folders.length} thư mục
-                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">
+                          {totalWords} từ • {folders.length} thư mục
+                        </span>
+                        {dueWords > 0 && (
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-0.5">
+                            <Flame className="w-3 h-3 text-amber-500" />
+                            {dueWords} cần ôn
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -414,9 +506,17 @@ export default function DashboardPage() {
                         <h3 className="font-bold text-theme-main text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
                           {folder.name}
                         </h3>
-                        <span className="text-xs text-theme-subtle font-medium">
-                          {cardCount} từ {unmastered > 0 ? `• ${unmastered} chưa thuộc` : ''}
-                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-theme-subtle font-medium">
+                            {cardCount} từ {unmastered > 0 ? `• ${unmastered} chưa thuộc` : ''}
+                          </span>
+                          {(folder.due_count || 0) > 0 && (
+                            <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-0.5">
+                              <Flame className="w-3 h-3 text-amber-500" />
+                              {folder.due_count} cần ôn
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

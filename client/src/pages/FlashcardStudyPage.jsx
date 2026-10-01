@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, RotateCw, Volume2, Shuffle, Check, X, 
-  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock, ArrowLeftRight
+  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock, ArrowLeftRight, Calendar
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
@@ -12,16 +12,20 @@ import { playWordAudio } from '../utils/audio';
 import CustomSelect from '../components/CustomSelect';
 import ConfirmModal from '../components/ConfirmModal';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
+import { formatInterval, calculateSM2Preview, isCardDue } from '../utils/sm2';
 
 export default function FlashcardStudyPage() {
   const { folderId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { refreshUser } = useAuth();
+
+  const isDueQuery = searchParams.get('due') === 'true';
 
   const [folders, setFolders] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState(folderId || 'all');
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState(isDueQuery ? 'due' : 'all');
   const [cards, setCards] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -41,6 +45,12 @@ export default function FlashcardStudyPage() {
       setSelectedFolderId(folderId);
     }
   }, [folderId]);
+
+  useEffect(() => {
+    if (searchParams.get('due') === 'true') {
+      setSelectedStatus('due');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadFolders();
@@ -96,11 +106,13 @@ export default function FlashcardStudyPage() {
       } else if (e.code === 'ArrowLeft') {
         handlePrev();
       } else if (e.key === '1') {
-        handleRate('unmastered');
+        handleRate('again');
       } else if (e.key === '2') {
-        handleRate('learning');
+        handleRate('hard');
       } else if (e.key === '3') {
-        handleRate('mastered');
+        handleRate('good');
+      } else if (e.key === '4') {
+        handleRate('easy');
       } else if (e.key === 'm' || e.key === 'M') {
         e.preventDefault();
         const word = cards[currentIndex]?.word;
@@ -129,7 +141,11 @@ export default function FlashcardStudyPage() {
       const params = {};
       if (selectedFolderId !== 'all') params.folder_id = selectedFolderId;
       if (selectedLevel !== 'all') params.level = selectedLevel;
-      if (selectedStatus !== 'all') params.status = selectedStatus;
+      if (selectedStatus === 'due') {
+        params.due = true;
+      } else if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
       const data = await api.cards.getAll(params);
       setCards(data);
       setCurrentIndex(0);
@@ -166,13 +182,13 @@ export default function FlashcardStudyPage() {
     }
   }
 
-  async function handleRate(status) {
+  async function handleRate(rating) {
     if (cards.length === 0) return;
     const currentCard = cards[currentIndex];
 
     try {
-      await api.cards.updateStatus(currentCard.id, status);
-      if (status === 'mastered') {
+      const res = await api.cards.review(currentCard.id, rating);
+      if (res?.card?.status === 'mastered' || rating === 'easy') {
         setMasteredCount(prev => prev + 1);
       }
       refreshUser?.();
@@ -208,7 +224,9 @@ export default function FlashcardStudyPage() {
         <BookOpen className="w-12 h-12 text-theme-subtle mx-auto mb-3" />
         <h3 className="text-lg font-bold text-theme-main">Chưa có từ vựng nào để học</h3>
         <p className="text-sm text-theme-muted mt-1 mb-6">
-          {selectedStatus === 'unmastered'
+          {selectedStatus === 'due'
+            ? '🎉 Tuyệt vời! Hiện tại bạn đã hoàn thành tất cả từ vựng cần ôn tập (SRS). Hãy quay lại vào ngày mai hoặc chọn "Tất cả trạng thái" để tiếp tục học!'
+            : selectedStatus === 'unmastered'
             ? 'Tuyệt vời! Bạn không có từ vựng nào thuộc nhóm "Chưa thuộc" theo bộ lọc này.'
             : selectedLevel !== 'all' 
             ? `Không có từ vựng nào thuộc cấp bậc ${selectedLevel} trong thư mục này.` 
@@ -241,9 +259,6 @@ export default function FlashcardStudyPage() {
       </div>
     );
   }
-
-  const currentCard = cards[currentIndex];
-  const progressPercent = Math.round(((currentIndex + 1) / cards.length) * 100);
 
   // Completion Screen
   if (studyDone) {
@@ -343,6 +358,12 @@ export default function FlashcardStudyPage() {
       iconColor: 'text-indigo-400'
     },
     {
+      value: 'due',
+      label: '🔥 Đến hạn ôn (SRS)',
+      icon: Sparkles,
+      iconColor: 'text-indigo-500'
+    },
+    {
       value: 'new',
       label: 'Chỉ từ mới',
       icon: Sparkles,
@@ -367,6 +388,12 @@ export default function FlashcardStudyPage() {
       iconColor: 'text-emerald-400'
     }
   ];
+
+  const currentCard = cards[currentIndex] || null;
+  const progressPercent = cards.length > 0 ? Math.round(((currentIndex + 1) / cards.length) * 100) : 0;
+  const intervalHard = currentCard ? formatInterval(currentCard.projected_intervals?.hard || calculateSM2Preview(currentCard, 'hard')) : '1 ngày';
+  const intervalGood = currentCard ? formatInterval(currentCard.projected_intervals?.good || calculateSM2Preview(currentCard, 'good')) : '3 ngày';
+  const intervalEasy = currentCard ? formatInterval(currentCard.projected_intervals?.easy || calculateSM2Preview(currentCard, 'easy')) : '7 ngày';
 
   return (
     <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in transition-colors duration-200">
@@ -465,13 +492,13 @@ export default function FlashcardStudyPage() {
                 {/* Top row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
-                      {currentCard.part_of_speech || 'Từ vựng'}
+                    <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 leading-none shrink-0">
+                      {(currentCard.part_of_speech || 'từ vựng').toLowerCase()}
                     </span>
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
                       currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
                       currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
@@ -484,6 +511,18 @@ export default function FlashcardStudyPage() {
                         'Từ mới'
                       }
                     </span>
+
+                    {currentCard.interval > 0 && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
+                        SRS: {formatInterval(currentCard.interval)}
+                      </span>
+                    )}
+
+                    {isCardDue(currentCard) && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
+                        Đến hạn
+                      </span>
+                    )}
                   </div>
 
                   <div onClick={(e) => e.stopPropagation()}>
@@ -521,6 +560,7 @@ export default function FlashcardStudyPage() {
                     <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
                     <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
                     <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">4</kbd>
                     <span>đánh giá</span>
                   </span>
                 </div>
@@ -531,14 +571,14 @@ export default function FlashcardStudyPage() {
                 {/* Top row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
                     <span className="text-base font-extrabold text-theme-main">{currentCard.word}</span>
                     {currentCard.phonetic && (
                       <span className="text-xs font-mono text-theme-subtle font-semibold">({currentCard.phonetic})</span>
                     )}
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
                       currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
                       currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
@@ -551,6 +591,18 @@ export default function FlashcardStudyPage() {
                         'Từ mới'
                       }
                     </span>
+
+                    {currentCard.interval > 0 && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
+                        SRS: {formatInterval(currentCard.interval)}
+                      </span>
+                    )}
+
+                    {isCardDue(currentCard) && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
+                        Đến hạn
+                      </span>
+                    )}
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
@@ -607,13 +659,13 @@ export default function FlashcardStudyPage() {
                 {/* Top row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 uppercase tracking-wider">
-                      {currentCard.part_of_speech || 'Từ vựng'}
+                    <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 leading-none shrink-0">
+                      {(currentCard.part_of_speech || 'từ vựng').toLowerCase()}
                     </span>
-                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
                       currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
                       currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
@@ -626,6 +678,18 @@ export default function FlashcardStudyPage() {
                         'Từ mới'
                       }
                     </span>
+
+                    {currentCard.interval > 0 && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
+                        SRS: {formatInterval(currentCard.interval)}
+                      </span>
+                    )}
+
+                    {isCardDue(currentCard) && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
+                        Đến hạn
+                      </span>
+                    )}
                   </div>
 
                   <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">
@@ -667,6 +731,7 @@ export default function FlashcardStudyPage() {
                     <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
                     <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
                     <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">4</kbd>
                     <span>đánh giá</span>
                   </span>
                 </div>
@@ -677,13 +742,13 @@ export default function FlashcardStudyPage() {
                 {/* Top row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2 min-w-0">
-                    <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border ${getLevelBadge(currentCard.level).badgeClass}`}>
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
                     <span className="text-xs font-bold text-theme-subtle truncate max-w-[150px] sm:max-w-[200px]" title={currentCard.meaning}>
                       {currentCard.meaning}
                     </span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                    <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
                       currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
                       currentCard.status === 'unmastered' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30' :
@@ -696,6 +761,18 @@ export default function FlashcardStudyPage() {
                         'Từ mới'
                       }
                     </span>
+
+                    {currentCard.interval > 0 && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
+                        SRS: {formatInterval(currentCard.interval)}
+                      </span>
+                    )}
+
+                    {isCardDue(currentCard) && (
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
+                        Đến hạn
+                      </span>
+                    )}
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
@@ -749,6 +826,7 @@ export default function FlashcardStudyPage() {
                     <kbd className="px-1.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 rounded font-mono text-[11px] font-bold">1</kbd>
                     <kbd className="px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded font-mono text-[11px] font-bold">2</kbd>
                     <kbd className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded font-mono text-[11px] font-bold">3</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 rounded font-mono text-[11px] font-bold">4</kbd>
                     <span>đánh giá</span>
                   </span>
                 </div>
@@ -758,8 +836,8 @@ export default function FlashcardStudyPage() {
         </div>
       </div>
 
-      {/* Assessment Controls */}
-      <div className="max-w-3xl mx-auto grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2">
+      {/* Assessment Controls - SM-2 Spaced Repetition */}
+      <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-2.5 pt-2">
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
@@ -768,35 +846,63 @@ export default function FlashcardStudyPage() {
           ← Thẻ trước
         </button>
 
+        {/* 1. Quên */}
         <button
-          onClick={() => handleRate('unmastered')}
-          className="py-3 px-2.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
+          onClick={() => handleRate('again')}
+          title="Quên từ - Ôn lại sau 1 ngày (Phím 1)"
+          className="py-2.5 px-2 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
         >
-          <X className="w-4 h-4 shrink-0" />
-          <span>Chưa thuộc (1)</span>
+          <div className="flex items-center space-x-1 text-xs sm:text-sm">
+            <X className="w-3.5 h-3.5 shrink-0" />
+            <span>Quên (1)</span>
+          </div>
+          <span className="text-[11px] opacity-80 font-medium mt-0.5">&lt; 1 ngày</span>
         </button>
 
+        {/* 2. Khó */}
         <button
-          onClick={() => handleRate('learning')}
-          className="py-3 px-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
+          onClick={() => handleRate('hard')}
+          title={`Nhớ nhưng khó - Ôn lại sau ${intervalHard} (Phím 2)`}
+          className="py-2.5 px-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
         >
-          <Clock className="w-4 h-4 shrink-0" />
-          <span>Đang học (2)</span>
+          <div className="flex items-center space-x-1 text-xs sm:text-sm">
+            <Clock className="w-3.5 h-3.5 shrink-0" />
+            <span>Khó (2)</span>
+          </div>
+          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalHard}</span>
         </button>
 
+        {/* 3. Nhớ */}
         <button
-          onClick={() => handleRate('mastered')}
-          className="py-3 px-2.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs sm:text-sm font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-xs whitespace-nowrap"
+          onClick={() => handleRate('good')}
+          title={`Nhớ tốt chuẩn SM-2 - Ôn lại sau ${intervalGood} (Phím 3)`}
+          className="py-2.5 px-2 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
         >
-          <Check className="w-4 h-4 shrink-0" />
-          <span>Đã thuộc (3)</span>
+          <div className="flex items-center space-x-1 text-xs sm:text-sm">
+            <Check className="w-3.5 h-3.5 shrink-0" />
+            <span>Nhớ (3)</span>
+          </div>
+          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalGood}</span>
+        </button>
+
+        {/* 4. Dễ */}
+        <button
+          onClick={() => handleRate('easy')}
+          title={`Rất dễ và tự tin - Ôn lại sau ${intervalEasy} (Phím 4)`}
+          className="py-2.5 px-2 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
+        >
+          <div className="flex items-center space-x-1 text-xs sm:text-sm">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span>Dễ (4)</span>
+          </div>
+          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalEasy}</span>
         </button>
 
         <button
           onClick={handleNext}
           className="py-3 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer text-center col-span-2 sm:col-span-1"
         >
-          Thẻ kế tiếp →
+          Kế tiếp →
         </button>
       </div>
 

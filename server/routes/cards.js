@@ -3,15 +3,38 @@ const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const Folder = require('../models/Folder');
 const { authenticateToken } = require('../middleware/auth');
+const { calculateSM2, getProjectedIntervals } = require('../utils/sm2');
 
 const router = express.Router();
 router.use(authenticateToken);
+
+// Count cards due for review (must be before /:id)
+router.get('/due/count', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { folder_id } = req.query;
+    const filter = {
+      user_id: userId,
+      next_review_date: { $lte: new Date() }
+    };
+
+    if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
+      filter.folder_id = folder_id;
+    }
+
+    const count = await Card.countDocuments(filter);
+    res.json({ count });
+  } catch (err) {
+    console.error('Count due cards error:', err);
+    res.status(500).json({ error: 'Lỗi khi đếm số từ cần ôn tập' });
+  }
+});
 
 // Get cards with optional filters
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { folder_id, search, status, level } = req.query;
+    const { folder_id, search, status, level, due } = req.query;
 
     const filter = { user_id: userId };
 
@@ -19,7 +42,10 @@ router.get('/', async (req, res) => {
       filter.folder_id = folder_id;
     }
 
-    if (status && status !== 'all') {
+    // Filter by Spaced Repetition Due status
+    if (due === 'true' || status === 'due') {
+      filter.next_review_date = { $lte: new Date() };
+    } else if (status && status !== 'all') {
       filter.status = status;
     }
 
@@ -42,7 +68,12 @@ router.get('/', async (req, res) => {
     }
 
     const cards = await Card.find(filter).populate('folder_id', 'name color').sort({ _id: -1 });
-    res.json(cards);
+    const results = cards.map(c => {
+      const json = c.toJSON();
+      json.projected_intervals = getProjectedIntervals(c);
+      return json;
+    });
+    res.json(results);
   } catch (err) {
     console.error('Get cards error:', err);
     res.status(500).json({ error: 'Không thể lấy danh sách từ vựng' });
@@ -249,32 +280,82 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Update card mastery status ('new' | 'learning' | 'mastered')
-router.patch('/:id/status', async (req, res) => {
+// Review card using SM-2 Spaced Repetition ('again' | 'hard' | 'good' | 'easy')
+router.post('/:id/review', async (req, res) => {
   try {
     const cardId = req.params.id;
     const userId = req.user.id;
-    const { status } = req.body;
+    const { rating } = req.body;
 
-    if (!['new', 'learning', 'unmastered', 'mastered'].includes(status)) {
-      return res.status(400).json({ error: 'Trạng thái học không hợp lệ' });
+    if (!['again', 'hard', 'good', 'easy', 'unmastered', 'learning', 'mastered'].includes(rating)) {
+      return res.status(400).json({ error: 'Đánh giá ôn tập không hợp lệ (again, hard, good, easy)' });
     }
 
     if (!mongoose.Types.ObjectId.isValid(cardId)) {
       return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
     }
 
-    const card = await Card.findOneAndUpdate(
-      { _id: cardId, user_id: userId },
-      { status },
-      { new: true }
-    );
-
+    const card = await Card.findOne({ _id: cardId, user_id: userId });
     if (!card) {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
 
-    res.json({ message: 'Cập nhật trạng thái thành công', status });
+    const sm2Update = calculateSM2(card, rating);
+    Object.assign(card, sm2Update);
+    await card.save();
+
+    const cardJson = card.toJSON();
+    cardJson.projected_intervals = getProjectedIntervals(card);
+
+    res.json({
+      message: 'Đã cập nhật tiến độ ôn tập!',
+      card: cardJson,
+      sm2: sm2Update
+    });
+  } catch (err) {
+    console.error('Review card error:', err);
+    res.status(500).json({ error: 'Lỗi khi lưu kết quả ôn tập' });
+  }
+});
+
+// Update card mastery status ('new' | 'learning' | 'mastered' | 'unmastered')
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const userId = req.user.id;
+    const { status, rating } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(cardId)) {
+      return res.status(404).json({ error: 'ID từ vựng không hợp lệ' });
+    }
+
+    const card = await Card.findOne({ _id: cardId, user_id: userId });
+    if (!card) {
+      return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
+    }
+
+    const effectiveRating = rating || (
+      status === 'mastered' ? 'easy' :
+      status === 'unmastered' ? 'again' :
+      status === 'learning' ? 'hard' : 'good'
+    );
+
+    const sm2Update = calculateSM2(card, effectiveRating);
+    if (status && ['new', 'learning', 'unmastered', 'mastered'].includes(status)) {
+      sm2Update.status = status;
+    }
+
+    Object.assign(card, sm2Update);
+    await card.save();
+
+    const cardJson = card.toJSON();
+    cardJson.projected_intervals = getProjectedIntervals(card);
+
+    res.json({
+      message: 'Cập nhật trạng thái thành công',
+      status: card.status,
+      card: cardJson
+    });
   } catch (err) {
     console.error('Update status error:', err);
     res.status(500).json({ error: 'Lỗi máy chủ' });

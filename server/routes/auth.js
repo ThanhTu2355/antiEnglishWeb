@@ -123,7 +123,8 @@ router.get('/me', authenticateToken, async (req, res) => {
     }
 
     // Run stats queries in parallel
-    const [folderCount, statsResult, practiceCount] = await Promise.all([
+    const now = new Date();
+    const [folderCount, statsResult, practiceCount, dueCardsCount] = await Promise.all([
       Folder.countDocuments({ user_id: req.user.id }),
       Card.aggregate([
         { $match: { user_id: user._id } },
@@ -138,7 +139,11 @@ router.get('/me', authenticateToken, async (req, res) => {
           }
         }
       ]),
-      PracticeHistory.countDocuments({ user_id: req.user.id })
+      PracticeHistory.countDocuments({ user_id: req.user.id }),
+      Card.countDocuments({
+        user_id: user._id,
+        next_review_date: { $lte: now }
+      })
     ]);
 
     const cardStats = statsResult[0] || {
@@ -158,6 +163,7 @@ router.get('/me', authenticateToken, async (req, res) => {
         unmastered_cards: cardStats.unmastered_cards || 0,
         learning_cards: cardStats.learning_cards || 0,
         new_cards: cardStats.new_cards || 0,
+        due_cards: dueCardsCount || 0,
         total_practices: practiceCount
       }
     });

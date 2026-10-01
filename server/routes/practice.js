@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Card = require('../models/Card');
 const PracticeHistory = require('../models/PracticeHistory');
 const { authenticateToken } = require('../middleware/auth');
+const { calculateSM2 } = require('../utils/sm2');
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -43,12 +44,18 @@ function checkMeaningMatch(userAnswer, trueMeaning) {
 router.get('/questions', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { folder_id, limit = 10, mode = 'fill_meaning', level, status } = req.query;
+    const { folder_id, limit = 10, mode = 'fill_meaning', level, status, due } = req.query;
 
     const matchFilter = { user_id: new mongoose.Types.ObjectId(userId) };
 
     if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
       matchFilter.folder_id = new mongoose.Types.ObjectId(folder_id);
+    }
+
+    if (due === 'true' || status === 'due') {
+      matchFilter.next_review_date = { $lte: new Date() };
+    } else if (status && status !== 'all') {
+      matchFilter.status = status;
     }
 
     if (level && level !== 'all') {
@@ -58,10 +65,6 @@ router.get('/questions', async (req, res) => {
       } else {
         matchFilter.level = norm;
       }
-    }
-
-    if (status && status !== 'all') {
-      matchFilter.status = status;
     }
 
     const isAll = limit === 'all' || Number(limit) === 0;
@@ -165,8 +168,11 @@ router.post('/check', async (req, res) => {
       expectedAnswer = card.word;
     }
 
-    const newStatus = isCorrect ? 'mastered' : 'learning';
-    await Card.findByIdAndUpdate(cardId, { status: newStatus });
+    // Update Spaced Repetition (SM-2)
+    const sm2Rating = isCorrect ? 'good' : 'again';
+    const sm2Update = calculateSM2(card, sm2Rating);
+    Object.assign(card, sm2Update);
+    await card.save();
 
     res.json({
       is_correct: isCorrect,
@@ -178,7 +184,10 @@ router.post('/check', async (req, res) => {
       part_of_speech: card.part_of_speech,
       example_en: card.example_en,
       example_vi: card.example_vi,
-      note: card.note
+      note: card.note,
+      card_status: card.status,
+      interval: card.interval,
+      next_review_date: card.next_review_date
     });
   } catch (err) {
     console.error('Check answer error:', err);

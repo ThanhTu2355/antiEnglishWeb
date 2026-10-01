@@ -87,8 +87,13 @@ export const api = {
       if (params.search) q.set('search', params.search);
       if (params.status) q.set('status', params.status);
       if (params.level) q.set('level', params.level);
+      if (params.due) q.set('due', 'true');
       const queryStr = q.toString() ? `?${q.toString()}` : '';
       return request(`/cards${queryStr}`);
+    },
+    getDueCount: (folder_id) => {
+      const q = folder_id && folder_id !== 'all' ? `?folder_id=${folder_id}` : '';
+      return request(`/cards/due/count${q}`);
     },
     getById: (id) => request(`/cards/${id}`),
     create: (data) => request('/cards', {
@@ -107,9 +112,13 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data)
     }),
-    updateStatus: (id, status) => request(`/cards/${id}/status`, {
+    updateStatus: (id, status, rating) => request(`/cards/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status, rating })
+    }),
+    review: (id, rating) => request(`/cards/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ rating })
     }),
     delete: (id) => request(`/cards/${id}`, {
       method: 'DELETE'
@@ -125,6 +134,7 @@ export const api = {
       if (params.mode) q.set('mode', params.mode);
       if (params.level) q.set('level', params.level);
       if (params.status) q.set('status', params.status);
+      if (params.due) q.set('due', 'true');
       return request(`/practice/questions?${q.toString()}`);
     },
     checkAnswer: (cardIdOrData, user_answer, mode) => {

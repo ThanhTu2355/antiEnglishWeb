@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, UploadCloud, BookOpen, Award, 
-  Search, Edit3, Trash2, CheckCircle2, Layers, XCircle, Clock, Sparkles, Folder
+  Search, Edit3, Trash2, CheckCircle2, Layers, XCircle, Clock, Sparkles, Folder, Flame
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/useAuth';
@@ -12,6 +12,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import CustomSelect from '../components/CustomSelect';
 import TTSButton from '../components/TTSButton';
 import { CEFR_LEVELS, getLevelBadge } from '../utils/levels';
+import { isCardDue, formatReviewDueDate, formatInterval } from '../utils/sm2';
 
 export default function FolderDetailPage() {
   const { id: folderId } = useParams();
@@ -103,7 +104,10 @@ export default function FolderDetailPage() {
     const matchesSearch = 
       c.word.toLowerCase().includes(search.toLowerCase()) ||
       c.meaning.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+    const matchesStatus = 
+      statusFilter === 'all' ? true : 
+      statusFilter === 'due' ? isCardDue(c) : 
+      c.status === statusFilter;
     const matchesLevel = levelFilter === 'all' || (c.level || 'B1').trim().toUpperCase() === levelFilter.trim().toUpperCase();
     return matchesSearch && matchesStatus && matchesLevel;
   });
@@ -236,6 +240,19 @@ export default function FolderDetailPage() {
           {/* Dòng 2: Các trạng thái từ */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <button
+              onClick={() => setStatusFilter(statusFilter === 'due' ? 'all' : 'due')}
+              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+                statusFilter === 'due'
+                  ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
+                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+              title="Bấm để lọc từ đến hạn ôn tập (SRS)"
+            >
+              <Flame className={`w-3.5 h-3.5 ${statusFilter === 'due' ? 'text-white' : 'text-amber-500 animate-pulse'}`} />
+              <span>Cần ôn: {cards.filter(isCardDue).length}</span>
+            </button>
+
+            <button
               onClick={() => setStatusFilter(statusFilter === 'new' ? 'all' : 'new')}
               className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                 statusFilter === 'new'
@@ -292,21 +309,27 @@ export default function FolderDetailPage() {
         {/* Study Action Buttons */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto shrink-0">
           <button
-            onClick={() => navigate((folder.is_all_folder || folderId === 'all') ? '/flashcards' : `/flashcards/${folder.id}`)}
+            onClick={() => {
+              const base = (folder.is_all_folder || folderId === 'all') ? '/flashcards' : `/flashcards/${folder.id}`;
+              navigate(statusFilter === 'due' ? `${base}?due=true` : base);
+            }}
             disabled={cards.length === 0}
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
             <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Học Flashcard</span>
+            <span>Học Flashcard{statusFilter === 'due' ? ' (SRS)' : ''}</span>
           </button>
 
           <button
-            onClick={() => navigate((folder.is_all_folder || folderId === 'all') ? '/practice' : `/practice/${folder.id}`)}
+            onClick={() => {
+              const base = (folder.is_all_folder || folderId === 'all') ? '/practice' : `/practice/${folder.id}`;
+              navigate(statusFilter === 'due' ? `${base}?due=true` : base);
+            }}
             disabled={cards.length === 0}
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm shadow-md shadow-purple-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
             <Award className="w-4 h-4 shrink-0" />
-            <span>Điền nghĩa & Kiểm tra</span>
+            <span>Điền nghĩa & Kiểm tra{statusFilter === 'due' ? ' (SRS)' : ''}</span>
           </button>
         </div>
       </div>
@@ -315,7 +338,7 @@ export default function FolderDetailPage() {
       <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 sm:gap-4">
         <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="relative w-full sm:w-[380px] lg:w-[420px] shrink-0">
             <Search className="w-4 h-4 text-theme-subtle absolute left-3.5 top-3.5" />
             <input
               type="text"
@@ -331,7 +354,7 @@ export default function FolderDetailPage() {
             value={statusFilter}
             onChange={setStatusFilter}
             options={statusOptions}
-            className="shrink-0"
+            className="w-full sm:w-[210px] shrink-0"
           />
 
           {/* Level filter */}
@@ -339,7 +362,7 @@ export default function FolderDetailPage() {
             value={levelFilter}
             onChange={setLevelFilter}
             options={levelOptions}
-            className="shrink-0"
+            className="w-full sm:w-[200px] shrink-0"
           />
         </div>
 
@@ -404,12 +427,22 @@ export default function FolderDetailPage() {
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center flex-wrap gap-1.5 min-w-0">
                       <TTSButton text={card.word} size={13} className="w-6 h-6 shrink-0" />
-                      <span className={`inline-flex items-center justify-center h-6 px-2 text-[11px] font-bold rounded-lg border leading-none shrink-0 ${getLevelBadge(card.level).badgeClass}`}>
+                      <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(card.level).badgeClass}`}>
                         {getLevelBadge(card.level).name}
                       </span>
-                      <span className="inline-flex items-center justify-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-tag-theme text-theme-muted border border-theme-subtle leading-none shrink-0">
-                        {card.part_of_speech || 'noun'}
+                      <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-tag-theme text-theme-muted border border-theme-subtle leading-none shrink-0">
+                        {(card.part_of_speech || 'noun').toLowerCase()}
                       </span>
+                      {isCardDue(card) ? (
+                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 gap-1 leading-none shrink-0" title="Từ này đã đến hạn ôn tập theo SM-2">
+                          <Flame className="w-3 h-3 text-rose-500 animate-pulse" />
+                          <span>Đến hạn</span>
+                        </span>
+                      ) : card.interval > 0 ? (
+                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-medium rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 gap-1 leading-none shrink-0" title={`Lần ôn kế tiếp: ${formatReviewDueDate(card.next_review_date)}`}>
+                          <span>{formatReviewDueDate(card.next_review_date)}</span>
+                        </span>
+                      ) : null}
                       {(folder.is_all_folder || folderId === 'all') && (
                         card.folder_name ? (
                           <span 
