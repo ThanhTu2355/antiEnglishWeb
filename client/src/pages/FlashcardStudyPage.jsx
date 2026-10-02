@@ -498,10 +498,10 @@ export default function FlashcardStudyPage() {
             /* =================== CHẾ ĐỘ XUÔI: EN ➔ VI =================== */
             <>
               {/* FRONT SIDE (English Word) */}
-              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
+              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-4 sm:p-6 md:p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
                 {/* Top row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
@@ -535,8 +535,8 @@ export default function FlashcardStudyPage() {
                     )}
                   </div>
 
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <TTSButton text={currentCard.word} size={18} className="p-2 sm:p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
                   </div>
                 </div>
 
@@ -577,10 +577,10 @@ export default function FlashcardStudyPage() {
               </div>
 
               {/* BACK SIDE (Vietnamese Meaning & Context) */}
-              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl">
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-4 sm:p-6 md:p-8 flex flex-col justify-between shadow-xl">
                 {/* Top row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
@@ -613,8 +613,8 @@ export default function FlashcardStudyPage() {
                       </span>
                     )}
                   </div>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <TTSButton text={currentCard.word} size={18} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <TTSButton text={currentCard.word} size={18} className="p-2 sm:p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
                   </div>
                 </div>
 
@@ -664,10 +664,10 @@ export default function FlashcardStudyPage() {
             /* =================== CHẾ ĐỘ NGƯỢC: VI ➔ EN =================== */
             <>
               {/* FRONT SIDE (Vietnamese Meaning) */}
-              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
+              <div className="absolute inset-0 backface-hidden bg-surface border-2 border-theme rounded-3xl p-4 sm:p-6 md:p-8 flex flex-col justify-between shadow-xl hover:border-indigo-500/60 hover:shadow-2xl transition-all">
                 {/* Top row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
@@ -701,7 +701,7 @@ export default function FlashcardStudyPage() {
                     )}
                   </div>
 
-                  <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">
+                  <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25 shrink-0 whitespace-nowrap">
                     Học ngược: VI ➔ EN
                   </span>
                 </div>
@@ -747,10 +747,10 @@ export default function FlashcardStudyPage() {
               </div>
 
               {/* BACK SIDE (English Word Revealed & Details) */}
-              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-8 flex flex-col justify-between shadow-xl">
+              <div className="absolute inset-0 backface-hidden rotate-y-180 bg-surface border-2 border-indigo-500/50 rounded-3xl p-4 sm:p-6 md:p-8 flex flex-col justify-between shadow-xl">
                 {/* Top row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
@@ -783,8 +783,8 @@ export default function FlashcardStudyPage() {
                       </span>
                     )}
                   </div>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <TTSButton text={currentCard.word} size={20} className="p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
+                  <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                    <TTSButton text={currentCard.word} size={18} className="p-2 sm:p-2.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 rounded-xl" />
                   </div>
                 </div>
 
