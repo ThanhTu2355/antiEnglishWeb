@@ -225,7 +225,7 @@ export default function FlashcardStudyPage() {
         <h3 className="text-lg font-bold text-theme-main">Chưa có từ vựng nào để học</h3>
         <p className="text-sm text-theme-muted mt-1 mb-6">
           {selectedStatus === 'due'
-            ? '🎉 Tuyệt vời! Hiện tại bạn đã hoàn thành tất cả từ vựng cần ôn tập (SRS). Hãy quay lại vào ngày mai hoặc chọn "Tất cả trạng thái" để tiếp tục học!'
+            ? '🎉 Tuyệt vời! Hiện tại bạn đã hoàn thành tất cả từ vựng cần ôn tập. Hãy quay lại vào ngày mai hoặc chọn "Tất cả trạng thái" để tiếp tục học!'
             : selectedStatus === 'unmastered'
             ? 'Tuyệt vời! Bạn không có từ vựng nào thuộc nhóm "Chưa thuộc" theo bộ lọc này.'
             : selectedLevel !== 'all' 
@@ -359,7 +359,7 @@ export default function FlashcardStudyPage() {
     },
     {
       value: 'due',
-      label: '🔥 Đến hạn ôn (SRS)',
+      label: '🔥 Đến hạn ôn',
       icon: Sparkles,
       iconColor: 'text-indigo-500'
     },
@@ -398,68 +398,78 @@ export default function FlashcardStudyPage() {
   return (
     <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fade-in transition-colors duration-200">
       {/* Top Header Controls */}
-      <div className="flex flex-wrap items-center justify-center gap-2 relative z-40 py-1">
-        <button
-          onClick={handleBackClick}
-          className="p-2.5 bg-surface hover:bg-surface-hover text-theme-muted rounded-2xl border border-theme shadow-xs transition-colors cursor-pointer shrink-0"
-          title="Quay lại Trang chủ"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+      <div className="max-w-2xl mx-auto w-full relative z-40 space-y-2.5 py-1">
+        {/* Dòng điều khiển: Trên laptop dàn 1 hàng dãn đều bằng flashcard, trên di động tự tách 2 hàng gọn gàng */}
+        <div className="sm:flex sm:items-center sm:gap-2 w-full space-y-2 sm:space-y-0">
+          {/* Nhóm 1: Nút quay lại & Combobox Thư mục (Mobile: Hàng 1 / Laptop: hòa vào hàng 1 qua sm:contents) */}
+          <div className="flex items-center gap-2 w-full sm:contents">
+            <button
+              onClick={handleBackClick}
+              className="p-2.5 bg-surface hover:bg-surface-hover text-theme-muted rounded-2xl border border-theme shadow-xs transition-colors cursor-pointer shrink-0"
+              title="Quay lại Trang chủ"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
 
-        {/* Folder selector */}
-        <CustomSelect
-          value={selectedFolderId}
-          onChange={(val) => {
-            setSelectedFolderId(val);
-            navigate(val === 'all' ? '/flashcards' : `/flashcards/${val}`);
-          }}
-          options={folderOptions}
-          className="shrink-0"
-        />
+            <CustomSelect
+              value={selectedFolderId}
+              onChange={(val) => {
+                setSelectedFolderId(val);
+                navigate(val === 'all' ? '/flashcards' : `/flashcards/${val}`);
+              }}
+              options={folderOptions}
+              className="flex-1 sm:flex-1 min-w-0"
+              buttonClassName="px-3 sm:px-3.5 text-xs sm:text-sm"
+            />
+          </div>
 
-        {/* Level selector */}
-        <CustomSelect
-          value={selectedLevel}
-          onChange={setSelectedLevel}
-          options={levelOptions}
-          className="shrink-0"
-        />
+          {/* Nhóm 2: Combobox Cấp bậc & Trạng thái (Mobile: Hàng 2 grid 2 cột / Laptop: hòa vào hàng 1 qua sm:contents) */}
+          <div className="grid grid-cols-2 gap-2 w-full sm:contents">
+            <CustomSelect
+              value={selectedLevel}
+              onChange={setSelectedLevel}
+              options={levelOptions}
+              className="w-full sm:flex-1 min-w-0"
+              buttonClassName="px-3 sm:px-3.5 text-xs sm:text-sm"
+            />
 
-        {/* Status selector */}
-        <CustomSelect
-          value={selectedStatus}
-          onChange={setSelectedStatus}
-          options={statusOptions}
-          className="shrink-0"
-        />
+            <CustomSelect
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              options={statusOptions}
+              className="w-full sm:flex-1 min-w-0"
+              buttonClassName="px-3 sm:px-3.5 text-xs sm:text-sm"
+            />
+          </div>
+        </div>
 
-        {/* Study direction toggle */}
-        <button
-          onClick={() => {
-            setStudyDirection(prev => prev === 'forward' ? 'reverse' : 'forward');
-            setIsFlipped(false);
-          }}
-          title={studyDirection === 'forward' ? 'Đang học Xuôi (Anh ➔ Việt). Bấm để chuyển sang Học Ngược (Việt ➔ Anh)' : 'Đang học Ngược (Việt ➔ Anh). Bấm để chuyển sang Học Xuôi (Anh ➔ Việt)'}
-          className={`px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 transition-all cursor-pointer border shadow-xs whitespace-nowrap shrink-0 ${
-            studyDirection === 'reverse'
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25'
-              : 'bg-surface hover:bg-surface-hover text-theme-main border-theme'
-          }`}
-        >
-          <ArrowLeftRight className={`w-4 h-4 ${studyDirection === 'reverse' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
-          <span>{studyDirection === 'forward' ? 'Xuôi (Anh ➔ Việt)' : 'Ngược (Việt ➔ Anh)'}</span>
-        </button>
+        {/* Dòng 2 (laptop) / Dòng 3 (di động): Đổi hướng học & Xáo trộn */}
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 w-full">
+          <button
+            onClick={() => {
+              setStudyDirection(prev => prev === 'forward' ? 'reverse' : 'forward');
+              setIsFlipped(false);
+            }}
+            title={studyDirection === 'forward' ? 'Đang học Xuôi (Anh ➔ Việt). Bấm để chuyển sang Học Ngược (Việt ➔ Anh)' : 'Đang học Ngược (Việt ➔ Anh). Bấm để chuyển sang Học Xuôi (Anh ➔ Việt)'}
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer border shadow-xs whitespace-nowrap shrink-0 ${
+              studyDirection === 'reverse'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25'
+                : 'bg-surface hover:bg-surface-hover text-theme-main border-theme'
+            }`}
+          >
+            <ArrowLeftRight className={`w-4 h-4 shrink-0 ${studyDirection === 'reverse' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
+            <span className="truncate">{studyDirection === 'forward' ? 'Xuôi (Anh ➔ Việt)' : 'Ngược (Việt ➔ Anh)'}</span>
+          </button>
 
-        {/* Shuffle button */}
-        <button
-          onClick={handleShuffle}
-          title="Xáo trộn thứ tự thẻ"
-          className="px-3.5 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-2xl text-xs sm:text-sm font-bold flex items-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap shrink-0"
-        >
-          <Shuffle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-          <span>Xáo trộn</span>
-        </button>
+          <button
+            onClick={handleShuffle}
+            title="Xáo trộn thứ tự thẻ"
+            className="w-full sm:w-auto px-4 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap shrink-0"
+          >
+            <Shuffle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span>Xáo trộn</span>
+          </button>
+        </div>
       </div>
 
       {/* Progress Bar */}
@@ -514,7 +524,7 @@ export default function FlashcardStudyPage() {
 
                     {currentCard.interval > 0 && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
-                        SRS: {formatInterval(currentCard.interval)}
+                        Chu kỳ: {formatInterval(currentCard.interval)}
                       </span>
                     )}
 
@@ -594,7 +604,7 @@ export default function FlashcardStudyPage() {
 
                     {currentCard.interval > 0 && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
-                        SRS: {formatInterval(currentCard.interval)}
+                        Chu kỳ: {formatInterval(currentCard.interval)}
                       </span>
                     )}
 
@@ -681,7 +691,7 @@ export default function FlashcardStudyPage() {
 
                     {currentCard.interval > 0 && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
-                        SRS: {formatInterval(currentCard.interval)}
+                        Chu kỳ: {formatInterval(currentCard.interval)}
                       </span>
                     )}
 
@@ -764,7 +774,7 @@ export default function FlashcardStudyPage() {
 
                     {currentCard.interval > 0 && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 leading-none shrink-0" title={`Lần ôn: ${currentCard.repetitions || 0}`}>
-                        SRS: {formatInterval(currentCard.interval)}
+                        Chu kỳ: {formatInterval(currentCard.interval)}
                       </span>
                     )}
 
@@ -837,73 +847,79 @@ export default function FlashcardStudyPage() {
       </div>
 
       {/* Assessment Controls - SM-2 Spaced Repetition */}
-      <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-2.5 pt-2">
-        <button
-          onClick={handlePrev}
-          disabled={currentIndex === 0}
-          className="py-3 px-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main text-xs sm:text-sm font-bold border border-theme shadow-xs transition-all disabled:opacity-40 cursor-pointer text-center"
-        >
-          ← Thẻ trước
-        </button>
+      <div className="max-w-2xl mx-auto w-full space-y-2.5 pt-2">
+        {/* 4 Nút Đánh giá SM-2 */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+          {/* 1. Quên */}
+          <button
+            onClick={() => handleRate('again')}
+            title="Quên từ - Ôn lại sau 1 ngày (Phím 1)"
+            className="py-2.5 px-2 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs active:scale-95"
+          >
+            <div className="flex items-center space-x-1 text-xs sm:text-sm">
+              <X className="w-3.5 h-3.5 shrink-0" />
+              <span>Quên (1)</span>
+            </div>
+            <span className="text-[11px] opacity-80 font-medium mt-0.5">&lt; 1 ngày</span>
+          </button>
 
-        {/* 1. Quên */}
-        <button
-          onClick={() => handleRate('again')}
-          title="Quên từ - Ôn lại sau 1 ngày (Phím 1)"
-          className="py-2.5 px-2 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center space-x-1 text-xs sm:text-sm">
-            <X className="w-3.5 h-3.5 shrink-0" />
-            <span>Quên (1)</span>
-          </div>
-          <span className="text-[11px] opacity-80 font-medium mt-0.5">&lt; 1 ngày</span>
-        </button>
+          {/* 2. Khó */}
+          <button
+            onClick={() => handleRate('hard')}
+            title={`Nhớ nhưng khó - Ôn lại sau ${intervalHard} (Phím 2)`}
+            className="py-2.5 px-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs active:scale-95"
+          >
+            <div className="flex items-center space-x-1 text-xs sm:text-sm">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span>Khó (2)</span>
+            </div>
+            <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalHard}</span>
+          </button>
 
-        {/* 2. Khó */}
-        <button
-          onClick={() => handleRate('hard')}
-          title={`Nhớ nhưng khó - Ôn lại sau ${intervalHard} (Phím 2)`}
-          className="py-2.5 px-2 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center space-x-1 text-xs sm:text-sm">
-            <Clock className="w-3.5 h-3.5 shrink-0" />
-            <span>Khó (2)</span>
-          </div>
-          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalHard}</span>
-        </button>
+          {/* 3. Nhớ */}
+          <button
+            onClick={() => handleRate('good')}
+            title={`Nhớ tốt - Ôn lại sau ${intervalGood} (Phím 3)`}
+            className="py-2.5 px-2 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs active:scale-95"
+          >
+            <div className="flex items-center space-x-1 text-xs sm:text-sm">
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span>Nhớ (3)</span>
+            </div>
+            <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalGood}</span>
+          </button>
 
-        {/* 3. Nhớ */}
-        <button
-          onClick={() => handleRate('good')}
-          title={`Nhớ tốt chuẩn SM-2 - Ôn lại sau ${intervalGood} (Phím 3)`}
-          className="py-2.5 px-2 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center space-x-1 text-xs sm:text-sm">
-            <Check className="w-3.5 h-3.5 shrink-0" />
-            <span>Nhớ (3)</span>
-          </div>
-          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalGood}</span>
-        </button>
+          {/* 4. Dễ */}
+          <button
+            onClick={() => handleRate('easy')}
+            title={`Rất dễ và tự tin - Ôn lại sau ${intervalEasy} (Phím 4)`}
+            className="py-2.5 px-2 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs active:scale-95"
+          >
+            <div className="flex items-center space-x-1 text-xs sm:text-sm">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>Dễ (4)</span>
+            </div>
+            <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalEasy}</span>
+          </button>
+        </div>
 
-        {/* 4. Dễ */}
-        <button
-          onClick={() => handleRate('easy')}
-          title={`Rất dễ và tự tin - Ôn lại sau ${intervalEasy} (Phím 4)`}
-          className="py-2.5 px-2 rounded-2xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 font-bold transition-all flex flex-col items-center justify-center cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center space-x-1 text-xs sm:text-sm">
-            <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>Dễ (4)</span>
-          </div>
-          <span className="text-[11px] opacity-80 font-medium mt-0.5">{intervalEasy}</span>
-        </button>
+        {/* 2 Nút Điều hướng Thẻ trước & Kế tiếp */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+          <button
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="py-3 px-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main text-xs sm:text-sm font-bold border border-theme shadow-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            ← Thẻ trước
+          </button>
 
-        <button
-          onClick={handleNext}
-          className="py-3 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer text-center col-span-2 sm:col-span-1"
-        >
-          Kế tiếp →
-        </button>
+          <button
+            onClick={handleNext}
+            className="py-3 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            Kế tiếp →
+          </button>
+        </div>
       </div>
 
       {/* Exit Confirmation Modal */}

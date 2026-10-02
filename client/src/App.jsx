@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage';
 import FolderDetailPage from './pages/FolderDetailPage';
 import FlashcardStudyPage from './pages/FlashcardStudyPage';
 import FillMeaningPracticePage from './pages/FillMeaningPracticePage';
+import GlobalTooltip from './components/GlobalTooltip';
 
 // Protected layout with Navbar and nested route views
 function ProtectedLayout() {
@@ -61,6 +62,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
+          <GlobalTooltip />
           <Routes>
             <Route
               path="/login"

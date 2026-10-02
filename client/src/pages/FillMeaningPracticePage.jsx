@@ -115,7 +115,7 @@ export default function FillMeaningPracticePage() {
       if (!questionList || questionList.length === 0) {
         let msg = 'Không có từ vựng nào trong thư mục này để luyện tập. Hãy thêm từ trước!';
         if (selectedStatus === 'due') {
-          msg = '🎉 Xuất sắc! Hiện tại không có từ vựng nào đến hạn ôn tập (SRS). Hãy quay lại sau nhé!';
+          msg = '🎉 Xuất sắc! Hiện tại không có từ vựng nào đến hạn ôn tập. Hãy quay lại sau nhé!';
         } else if (selectedStatus === 'unmastered') {
           msg = 'Tuyệt vời! Bạn không có từ vựng nào "Chưa thuộc" phù hợp với bộ lọc đã chọn.';
         } else if (selectedStatus === 'learning') {
@@ -398,7 +398,7 @@ export default function FillMeaningPracticePage() {
                 }`}
               >
                 <Flame className={`w-4 h-4 ${selectedStatus === 'due' ? 'text-white' : 'text-amber-500 animate-pulse'}`} />
-                <span>Đến hạn (SRS)</span>
+                <span>Cần ôn</span>
               </button>
               <button
                 type="button"
@@ -857,7 +857,7 @@ export default function FillMeaningPracticePage() {
                 )}
                 {checkedResult.interval !== undefined && (
                   <p className="text-[11px] text-indigo-700 dark:text-indigo-400 font-semibold pt-1 flex items-center gap-1">
-                    <span>📅 Lần ôn tiếp theo (SRS):</span>
+                    <span>📅 Lần ôn tiếp theo:</span>
                     <span className="font-bold underline">sau {formatInterval(checkedResult.interval)}</span>
                   </p>
                 )}

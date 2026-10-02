@@ -53,7 +53,9 @@ router.get('/questions', async (req, res) => {
     }
 
     if (due === 'true' || status === 'due') {
-      matchFilter.next_review_date = { $lte: new Date() };
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      matchFilter.next_review_date = { $lte: endOfToday };
     } else if (status && status !== 'all') {
       matchFilter.status = status;
     }

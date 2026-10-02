@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
 
     const folderIds = folders.map(f => f._id);
     const now = new Date();
+    now.setHours(23, 59, 59, 999);
     const cardAgg = await Card.aggregate([
       { $match: { folder_id: { $in: folderIds } } },
       {
@@ -58,6 +59,7 @@ router.get('/all', async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
+    now.setHours(23, 59, 59, 999);
     const cardAgg = await Card.aggregate([
       { $match: { user_id: new mongoose.Types.ObjectId(userId) } },
       {
@@ -131,6 +133,7 @@ router.get('/:id', async (req, res) => {
     }
 
     const now = new Date();
+    now.setHours(23, 59, 59, 999);
     const [folder, cardAgg] = await Promise.all([
       Folder.findOne({ _id: folderId, user_id: userId }),
       Card.aggregate([

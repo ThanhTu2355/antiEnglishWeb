@@ -209,16 +209,12 @@ export default function DashboardPage() {
               <span className="text-2xl font-black text-amber-300 mt-1 block">{totalWords}</span>
             </div>
 
-            <div 
-              onClick={() => navigate('/flashcards?due=true')}
-              title="Bấm để ôn tập các từ đến hạn theo thuật toán SM-2"
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-amber-400/40 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-all cursor-pointer group col-span-2 sm:col-span-1"
-            >
-              <span className="text-xs text-amber-300 font-bold flex items-center justify-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                Cần ôn (SRS)
+            <div className="bg-white/10 hover:bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl p-3 sm:p-4 text-center shadow-xs transition-colors col-span-2 sm:col-span-1">
+              <span className="text-xs text-amber-200 font-semibold flex items-center justify-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-amber-300" />
+                Cần ôn
               </span>
-              <span className="text-2xl font-black text-amber-300 mt-1 block group-hover:scale-110 transition-transform">
+              <span className="text-2xl font-black text-amber-300 mt-1 block">
                 {dueWords}
               </span>
             </div>
@@ -249,7 +245,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Spaced Repetition (SRS) Callout Widget */}
+      {/* Spaced Repetition Callout Widget */}
       <div className={`relative overflow-hidden rounded-3xl p-6 sm:p-7 border shadow-lg transition-all ${
         dueWords > 0 
           ? 'bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 dark:from-amber-950/25 dark:via-orange-950/25 dark:to-rose-950/25 border-amber-500/30' 
@@ -286,11 +282,11 @@ export default function DashboardPage() {
                   ? `Bạn có ${dueWords} từ vựng đã đến thời điểm vàng cần ôn tập!` 
                   : 'Tuyệt vời! Toàn bộ từ vựng đều đang trong chu kỳ ghi nhớ tốt.'}
               </h2>
-              <p className="text-xs sm:text-sm text-theme-muted mt-1 max-w-2xl">
-                {dueWords > 0 
-                  ? 'Thuật toán SuperMemo 2 (SM-2) tính toán chu kỳ quên tự nhiên của não bộ. Ôn lại ngay bây giờ sẽ giúp kích hoạt trí nhớ dài hạn vĩnh viễn!'
-                  : 'Hệ thống tự động nhắc nhở khi đến chu kỳ ôn tập tiếp theo. Bạn có thể luyện tập tự do bất kỳ lúc nào.'}
-              </p>
+              {dueWords === 0 && (
+                <p className="text-xs sm:text-sm text-theme-muted mt-1 max-w-2xl">
+                  Hệ thống tự động nhắc nhở khi đến chu kỳ ôn tập tiếp theo. Bạn có thể luyện tập tự do bất kỳ lúc nào.
+                </p>
+              )}
             </div>
           </div>
 

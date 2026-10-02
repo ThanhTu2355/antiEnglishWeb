@@ -63,8 +63,12 @@ function calculateSM2(card, rating) {
   }
 
   // Calculate next review date
+  // Standard Spaced Repetition (Anki model):
+  // Schedule to start of target calendar day (00:00:00) so user can review anytime on that day
   const now = new Date();
-  const nextReviewDate = new Date(now.getTime() + newInterval * 24 * 60 * 60 * 1000);
+  const nextReviewDate = new Date();
+  nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
+  nextReviewDate.setHours(0, 0, 0, 0);
 
   // Status mapping compatible with existing stats
   let newStatus = 'learning';

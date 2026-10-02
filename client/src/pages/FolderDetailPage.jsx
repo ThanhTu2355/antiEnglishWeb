@@ -139,6 +139,13 @@ export default function FolderDetailPage() {
       iconColor: 'text-indigo-600 dark:text-indigo-400'
     },
     {
+      value: 'due',
+      label: 'Cần ôn',
+      count: cards.filter(isCardDue).length,
+      icon: Flame,
+      iconColor: 'text-amber-500'
+    },
+    {
       value: 'new',
       label: 'Từ mới',
       count: cards.filter(c => c.status === 'new').length,
@@ -239,70 +246,40 @@ export default function FolderDetailPage() {
 
           {/* Dòng 2: Các trạng thái từ */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'due' ? 'all' : 'due')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'due'
-                  ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
-                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
-              }`}
-              title="Bấm để lọc từ đến hạn ôn tập (SRS)"
+            <span
+              className="px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
             >
-              <Flame className={`w-3.5 h-3.5 ${statusFilter === 'due' ? 'text-white' : 'text-amber-500 animate-pulse'}`} />
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
               <span>Cần ôn: {cards.filter(isCardDue).length}</span>
-            </button>
+            </span>
 
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'new' ? 'all' : 'new')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'new'
-                  ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
-                  : 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30 hover:bg-sky-500/25'
-              }`}
-              title="Bấm để lọc Từ mới"
+            <span
+              className="px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Từ mới: {cards.filter(c => c.status === 'new').length}</span>
-            </button>
+            </span>
 
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'learning' ? 'all' : 'learning')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'learning'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/25'
-              }`}
-              title="Bấm để lọc từ Đang học"
+            <span
+              className="px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
             >
               <Clock className="w-3.5 h-3.5" />
               <span>Đang học: {cards.filter(c => c.status === 'learning').length}</span>
-            </button>
+            </span>
 
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'unmastered' ? 'all' : 'unmastered')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'unmastered'
-                  ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
-                  : 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
-              }`}
-              title="Bấm để lọc từ Chưa thuộc"
+            <span
+              className="px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
             >
               <XCircle className="w-3.5 h-3.5" />
               <span>Chưa thuộc: {cards.filter(c => c.status === 'unmastered').length}</span>
-            </button>
+            </span>
 
-            <button
-              onClick={() => setStatusFilter(statusFilter === 'mastered' ? 'all' : 'mastered')}
-              className={`px-3 py-1 text-xs font-bold rounded-full border transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
-                statusFilter === 'mastered'
-                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
-                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
-              }`}
-              title="Bấm để lọc từ Đã thuộc"
+            <span
+              className="px-3 py-1 text-xs font-bold rounded-full border flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Đã thuộc: {cards.filter(c => c.status === 'mastered').length}</span>
-            </button>
+            </span>
           </div>
         </div>
 
@@ -317,7 +294,7 @@ export default function FolderDetailPage() {
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
             <BookOpen className="w-4 h-4 shrink-0" />
-            <span>Học Flashcard{statusFilter === 'due' ? ' (SRS)' : ''}</span>
+            <span>Học Flashcard</span>
           </button>
 
           <button
@@ -329,7 +306,7 @@ export default function FolderDetailPage() {
             className="flex-1 lg:flex-none px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm shadow-md shadow-purple-600/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-40 whitespace-nowrap"
           >
             <Award className="w-4 h-4 shrink-0" />
-            <span>Điền nghĩa & Kiểm tra{statusFilter === 'due' ? ' (SRS)' : ''}</span>
+            <span>Điền nghĩa & Kiểm tra</span>
           </button>
         </div>
       </div>
@@ -425,7 +402,7 @@ export default function FolderDetailPage() {
                 <div>
                   {/* Top card bar */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <TTSButton text={card.word} size={13} className="w-6 h-6 shrink-0" />
                       <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(card.level).badgeClass}`}>
                         {getLevelBadge(card.level).name}
@@ -434,39 +411,15 @@ export default function FolderDetailPage() {
                         {(card.part_of_speech || 'noun').toLowerCase()}
                       </span>
                       {isCardDue(card) ? (
-                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 gap-1 leading-none shrink-0" title="Từ này đã đến hạn ôn tập theo SM-2">
+                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 gap-1 leading-none shrink-0">
                           <Flame className="w-3 h-3 text-rose-500 animate-pulse" />
                           <span>Đến hạn</span>
                         </span>
                       ) : card.interval > 0 ? (
-                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-medium rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 gap-1 leading-none shrink-0" title={`Lần ôn kế tiếp: ${formatReviewDueDate(card.next_review_date)}`}>
+                        <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-medium rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20 gap-1 leading-none shrink-0">
                           <span>{formatReviewDueDate(card.next_review_date)}</span>
                         </span>
                       ) : null}
-                      {(folder.is_all_folder || folderId === 'all') && (
-                        card.folder_name ? (
-                          <span 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetFId = typeof card.folder_id === 'object' ? (card.folder_id?.id || card.folder_id?._id) : card.folder_id;
-                              if (targetFId) navigate(`/folders/${targetFId}`);
-                            }}
-                            title={`Thuộc thư mục: ${card.folder_name} (Bấm để xem thư mục này)`}
-                            className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors cursor-pointer gap-1 shrink-0 leading-none"
-                          >
-                            <Folder className="w-3 h-3 shrink-0" />
-                            <span className="truncate max-w-[120px]">{card.folder_name}</span>
-                          </span>
-                        ) : (
-                          <span 
-                            title="Từ vựng này thuộc Kho tổng (dùng chung cho toàn bộ ứng dụng)"
-                            className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 shrink-0 leading-none"
-                          >
-                            <Layers className="w-3 h-3 shrink-0" />
-                            <span>Kho tổng</span>
-                          </span>
-                        )
-                      )}
                     </div>
 
                     <button
@@ -513,25 +466,53 @@ export default function FolderDetailPage() {
                   )}
                 </div>
 
-                {/* Bottom card actions */}
-                <div className="flex items-center justify-end space-x-2 pt-3 border-t border-theme-subtle mt-4">
-                  <button
-                    onClick={() => {
-                      setCardToEdit(card);
-                      setIsCardModalOpen(true);
-                    }}
-                    className="p-1.5 text-theme-subtle hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
-                    title="Sửa từ"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCardClick(card)}
-                    className="p-1.5 text-theme-subtle hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                    title="Xóa từ"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                {/* Bottom card footer: Folder origin tag & actions */}
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-theme-subtle mt-4 min-h-[38px]">
+                  <div className="min-w-0 flex-1">
+                    {(folder.is_all_folder || folderId === 'all') && (
+                      card.folder_name ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const targetFId = typeof card.folder_id === 'object' ? (card.folder_id?.id || card.folder_id?._id) : card.folder_id;
+                            if (targetFId) navigate(`/folders/${targetFId}`);
+                          }}
+                          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/25 transition-colors cursor-pointer gap-1.5 shrink-0 leading-none max-w-full"
+                        >
+                          <Folder className="w-3.5 h-3.5 shrink-0 text-indigo-500 dark:text-indigo-400" />
+                          <span className="truncate max-w-[140px]">{card.folder_name}</span>
+                        </button>
+                      ) : (
+                        <span 
+                          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1.5 shrink-0 leading-none"
+                        >
+                          <Layers className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                          <span>Kho tổng</span>
+                        </span>
+                      )
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-1 shrink-0">
+                    <button
+                      onClick={() => {
+                        setCardToEdit(card);
+                        setIsCardModalOpen(true);
+                      }}
+                      className="p-1.5 text-theme-subtle hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                      title="Sửa từ"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCardClick(card)}
+                      className="p-1.5 text-theme-subtle hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Xóa từ"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

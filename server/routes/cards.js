@@ -13,9 +13,11 @@ router.get('/due/count', async (req, res) => {
   try {
     const userId = req.user.id;
     const { folder_id } = req.query;
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
     const filter = {
       user_id: userId,
-      next_review_date: { $lte: new Date() }
+      next_review_date: { $lte: endOfToday }
     };
 
     if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
@@ -44,7 +46,9 @@ router.get('/', async (req, res) => {
 
     // Filter by Spaced Repetition Due status
     if (due === 'true' || status === 'due') {
-      filter.next_review_date = { $lte: new Date() };
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+      filter.next_review_date = { $lte: endOfToday };
     } else if (status && status !== 'all') {
       filter.status = status;
     }

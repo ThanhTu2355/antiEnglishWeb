@@ -51,7 +51,10 @@ export function formatInterval(days) {
 
 export function isCardDue(card) {
   if (!card || !card.next_review_date) return true;
-  return new Date(card.next_review_date) <= new Date();
+  const reviewDate = new Date(card.next_review_date);
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return reviewDate <= endOfToday;
 }
 
 export function formatReviewDueDate(dateString) {
