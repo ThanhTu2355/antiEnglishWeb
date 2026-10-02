@@ -424,7 +424,7 @@ export default function FolderDetailPage() {
 
                     <button
                       onClick={() => handleToggleStatus(card)}
-                      title="Bấm để chuyển trạng thái: Từ mới ➔ Đang học ➔ Chưa thuộc ➔ Đã thuộc"
+                      title="Bấm để chuyển trạng thái"
                       className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border transition-all duration-150 cursor-pointer shrink-0 leading-none whitespace-nowrap hover:brightness-110 hover:scale-105 active:scale-95 shadow-xs ${statusConfig.bg}`}
                     >
                       {statusConfig.label}
