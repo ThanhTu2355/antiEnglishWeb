@@ -72,5 +72,7 @@ export function formatReviewDueDate(dateString) {
   if (diffDays === 1) return 'Ngày mai';
   if (diffDays < 7) return `${diffDays} ngày nữa`;
   
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
 }

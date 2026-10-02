@@ -584,10 +584,9 @@ export default function FlashcardStudyPage() {
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
-                    <span className="text-base font-extrabold text-theme-main">{currentCard.word}</span>
-                    {currentCard.phonetic && (
-                      <span className="text-xs font-mono text-theme-subtle font-semibold">({currentCard.phonetic})</span>
-                    )}
+                    <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 leading-none shrink-0">
+                      {(currentCard.part_of_speech || 'từ vựng').toLowerCase()}
+                    </span>
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
                       currentCard.status === 'learning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' :
@@ -755,8 +754,8 @@ export default function FlashcardStudyPage() {
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${getLevelBadge(currentCard.level).badgeClass}`}>
                       {getLevelBadge(currentCard.level).name}
                     </span>
-                    <span className="text-xs font-bold text-theme-subtle truncate max-w-[150px] sm:max-w-[200px]" title={currentCard.meaning}>
-                      {currentCard.meaning}
+                    <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border border-indigo-500/30 leading-none shrink-0">
+                      {(currentCard.part_of_speech || 'từ vựng').toLowerCase()}
                     </span>
                     <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none shrink-0 ${
                       currentCard.status === 'mastered' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' :
