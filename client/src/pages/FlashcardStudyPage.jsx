@@ -27,6 +27,7 @@ export default function FlashcardStudyPage() {
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState(isDueQuery ? 'due' : 'all');
   const [cards, setCards] = useState([]);
+  const [initialTotalCards, setInitialTotalCards] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -148,6 +149,7 @@ export default function FlashcardStudyPage() {
       }
       const data = await api.cards.getAll(params);
       setCards(data);
+      setInitialTotalCards(data.length);
       setCurrentIndex(0);
       setIsFlipped(false);
       setStudyDone(false);
@@ -166,8 +168,8 @@ export default function FlashcardStudyPage() {
     setIsFlipped(false);
   }
 
-  function handleNext() {
-    if (currentIndex < cards.length - 1) {
+  function handleNext(targetCards = cards) {
+    if (currentIndex < targetCards.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setIsFlipped(false);
     } else {
@@ -186,16 +188,46 @@ export default function FlashcardStudyPage() {
     if (cards.length === 0) return;
     const currentCard = cards[currentIndex];
 
+    // Giải pháp 4: Tự động xếp từ 'Khó' (phím 2) hoặc 'Quên' (phím 1) vào cuối phiên học
+    let updatedCards = cards;
+    let shouldRequeue = false;
+    let retryCard = null;
+
+    if (rating === 'hard' && (currentCard._hardRetryCount || 0) < 1) {
+      // Quy tắc "Cơ hội thứ hai": Lặp lại tối đa 1 lần trong phiên cho từ 'Khó' để tránh vòng lặp vô tận
+      shouldRequeue = true;
+      retryCard = {
+        ...currentCard,
+        _isRetry: true,
+        _retryType: 'hard',
+        _hardRetryCount: (currentCard._hardRetryCount || 0) + 1
+      };
+    } else if (rating === 'again' && (currentCard._againRetryCount || 0) < 2) {
+      // Lặp lại tối đa 2 lần trong phiên cho từ 'Quên'
+      shouldRequeue = true;
+      retryCard = {
+        ...currentCard,
+        _isRetry: true,
+        _retryType: 'again',
+        _againRetryCount: (currentCard._againRetryCount || 0) + 1
+      };
+    }
+
+    if (shouldRequeue && retryCard) {
+      updatedCards = [...cards, retryCard];
+      setCards(updatedCards);
+    }
+
     try {
       const res = await api.cards.review(currentCard.id, rating);
       if (res?.card?.status === 'mastered' || rating === 'easy') {
         setMasteredCount(prev => prev + 1);
       }
       refreshUser?.();
-      handleNext();
+      handleNext(updatedCards);
     } catch (err) {
       console.error(err);
-      handleNext();
+      handleNext(updatedCards);
     }
   }
 
@@ -271,7 +303,14 @@ export default function FlashcardStudyPage() {
 
           <div>
             <h2 className="text-2xl font-black text-theme-main">Tuyệt vời! Bạn đã hoàn thành!</h2>
-            <p className="text-sm text-theme-muted mt-1">Đã ôn luyện toàn bộ {cards.length} thẻ từ vựng trong lượt này.</p>
+            <p className="text-sm text-theme-muted mt-1">
+              Đã ôn luyện toàn bộ {initialTotalCards || cards.length} thẻ từ vựng trong lượt này.
+              {cards.length > (initialTotalCards || cards.length) && (
+                <span className="text-amber-600 dark:text-amber-400 font-semibold block mt-1">
+                  (Đã tự động lặp lại củng cố {cards.length - (initialTotalCards || cards.length)} lượt cho các từ khó/quên)
+                </span>
+              )}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 py-2">
@@ -281,17 +320,14 @@ export default function FlashcardStudyPage() {
             </div>
             <div className="bg-input-theme rounded-2xl p-4 border border-theme-subtle">
               <span className="text-xs text-theme-subtle font-medium block">Tổng số thẻ ôn</span>
-              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{cards.length} thẻ</span>
+              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{initialTotalCards || cards.length} thẻ</span>
             </div>
           </div>
 
           <div className="space-y-3 pt-2">
             <button
               onClick={() => {
-                setCurrentIndex(0);
-                setIsFlipped(false);
-                setStudyDone(false);
-                setMasteredCount(0);
+                loadCards();
               }}
               className="w-full py-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main font-bold text-sm transition-all border border-theme flex items-center justify-center space-x-2 cursor-pointer"
             >
@@ -533,6 +569,17 @@ export default function FlashcardStudyPage() {
                         Đến hạn
                       </span>
                     )}
+
+                    {currentCard._isRetry && (
+                      <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none gap-1 shrink-0 ${
+                        currentCard._retryType === 'hard'
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                      }`}>
+                        <RotateCw className="w-3 h-3" />
+                        <span>{currentCard._retryType === 'hard' ? 'Ôn lại từ khó' : 'Ôn lại từ quên'}</span>
+                      </span>
+                    )}
                   </div>
 
                   <div onClick={(e) => e.stopPropagation()} className="shrink-0">
@@ -610,6 +657,17 @@ export default function FlashcardStudyPage() {
                     {isCardDue(currentCard) && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
                         Đến hạn
+                      </span>
+                    )}
+
+                    {currentCard._isRetry && (
+                      <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none gap-1 shrink-0 ${
+                        currentCard._retryType === 'hard'
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                      }`}>
+                        <RotateCw className="w-3 h-3" />
+                        <span>{currentCard._retryType === 'hard' ? 'Ôn lại từ khó' : 'Ôn lại từ quên'}</span>
                       </span>
                     )}
                   </div>
@@ -699,6 +757,17 @@ export default function FlashcardStudyPage() {
                         Đến hạn
                       </span>
                     )}
+
+                    {currentCard._isRetry && (
+                      <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none gap-1 shrink-0 ${
+                        currentCard._retryType === 'hard'
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                      }`}>
+                        <RotateCw className="w-3 h-3" />
+                        <span>{currentCard._retryType === 'hard' ? 'Ôn lại từ khó' : 'Ôn lại từ quên'}</span>
+                      </span>
+                    )}
                   </div>
 
                   <span className="text-[11px] font-extrabold px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25 shrink-0 whitespace-nowrap">
@@ -780,6 +849,17 @@ export default function FlashcardStudyPage() {
                     {isCardDue(currentCard) && (
                       <span className="inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse leading-none shrink-0">
                         Đến hạn
+                      </span>
+                    )}
+
+                    {currentCard._isRetry && (
+                      <span className={`inline-flex items-center justify-center h-6 px-2.5 text-[11px] font-bold rounded-full border leading-none gap-1 shrink-0 ${
+                        currentCard._retryType === 'hard'
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                      }`}>
+                        <RotateCw className="w-3 h-3" />
+                        <span>{currentCard._retryType === 'hard' ? 'Ôn lại từ khó' : 'Ôn lại từ quên'}</span>
                       </span>
                     )}
                   </div>
