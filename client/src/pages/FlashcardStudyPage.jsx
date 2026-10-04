@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ArrowLeft, RotateCw, Volume2, Shuffle, Check, X, 
-  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock, ArrowLeftRight, Calendar
+  ArrowLeft, RotateCw, Volume2, Check, X, 
+  Sparkles, Award, ArrowRight, BookOpen, Folder, Layers, XCircle, CheckCircle2, Clock, Calendar
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../api/client';
@@ -148,8 +148,14 @@ export default function FlashcardStudyPage() {
         params.status = selectedStatus;
       }
       const data = await api.cards.getAll(params);
-      setCards(data);
-      setInitialTotalCards(data.length);
+      // Tự động xáo trộn ngẫu nhiên thứ tự các thẻ khi bắt đầu học
+      const shuffledData = [...(data || [])];
+      for (let i = shuffledData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledData[i], shuffledData[j]] = [shuffledData[j], shuffledData[i]];
+      }
+      setCards(shuffledData);
+      setInitialTotalCards(shuffledData.length);
       setCurrentIndex(0);
       setIsFlipped(false);
       setStudyDone(false);
@@ -159,13 +165,6 @@ export default function FlashcardStudyPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleShuffle() {
-    const shuffled = [...cards].sort(() => Math.random() - 0.5);
-    setCards(shuffled);
-    setCurrentIndex(0);
-    setIsFlipped(false);
   }
 
   function handleNext(targetCards = cards) {
@@ -477,34 +476,6 @@ export default function FlashcardStudyPage() {
               buttonClassName="px-3 sm:px-3.5 text-xs sm:text-sm"
             />
           </div>
-        </div>
-
-        {/* Dòng 2 (laptop) / Dòng 3 (di động): Đổi hướng học & Xáo trộn */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-center gap-2 w-full">
-          <button
-            onClick={() => {
-              setStudyDirection(prev => prev === 'forward' ? 'reverse' : 'forward');
-              setIsFlipped(false);
-            }}
-            title={studyDirection === 'forward' ? 'Đang học Xuôi (Anh ➔ Việt). Bấm để chuyển sang Học Ngược (Việt ➔ Anh)' : 'Đang học Ngược (Việt ➔ Anh). Bấm để chuyển sang Học Xuôi (Anh ➔ Việt)'}
-            className={`w-full sm:w-auto px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer border shadow-xs whitespace-nowrap shrink-0 ${
-              studyDirection === 'reverse'
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-600/25'
-                : 'bg-surface hover:bg-surface-hover text-theme-main border-theme'
-            }`}
-          >
-            <ArrowLeftRight className={`w-4 h-4 shrink-0 ${studyDirection === 'reverse' ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'}`} />
-            <span className="truncate">{studyDirection === 'forward' ? 'Xuôi (Anh ➔ Việt)' : 'Ngược (Việt ➔ Anh)'}</span>
-          </button>
-
-          <button
-            onClick={handleShuffle}
-            title="Xáo trộn thứ tự thẻ"
-            className="w-full sm:w-auto px-4 py-2.5 bg-surface hover:bg-surface-hover text-theme-main rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer border border-theme shadow-xs whitespace-nowrap shrink-0"
-          >
-            <Shuffle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span>Xáo trộn</span>
-          </button>
         </div>
       </div>
 
