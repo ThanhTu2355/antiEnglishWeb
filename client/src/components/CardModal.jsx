@@ -16,6 +16,7 @@ const SAMPLE_WORDS = [
   { word: 'essential', phonetic: '/ɪˈsen.ʃəl/', meaning: 'thiết yếu, cực kỳ quan trọng', pos: 'adjective', level: 'A2', en: 'Water is essential for all living beings.', vi: 'Nước là thiết yếu cho mọi sinh vật sống.', n: 'Đồng nghĩa: vital, crucial' },
   { word: 'algorithm', phonetic: '/ˈæl.ɡə.rɪ.ðəm/', meaning: 'thuật toán, quy trình giải quyết vấn đề từng bước', pos: 'noun', level: 'Other', en: 'A search engine uses a complex algorithm to rank web pages.', vi: 'Một công cụ tìm kiếm sử dụng một thuật toán phức tạp để xếp hạng các trang web.', n: 'Thuật ngữ tin học / chuyên ngành kỹ thuật' },
   { word: 'photosynthesis', phonetic: '/ˌfoʊ.toʊˈsɪn.θə.sɪs/', meaning: 'quang hợp (quá trình tổng hợp chất hữu cơ nhờ ánh sáng)', pos: 'noun', level: 'Other', en: 'Green plants use photosynthesis to produce energy.', vi: 'Cây xanh dùng quá trình quang hợp để tạo ra năng lượng.', n: 'Thuật ngữ sinh học / chuyên ngành' },
+  { word: 'ought to', phonetic: '/ˈɔːt ˌtuː/', meaning: 'nên, phải (chỉ bổn phận hoặc lời khuyên)', pos: 'modal verb', level: 'B1', en: 'You ought to consult a doctor if the symptoms persist.', vi: 'Bạn nên đi khám bác sĩ nếu các triệu chứng vẫn kéo dài.', n: 'Động từ khuyết thiếu tương tự should' },
   { word: 'It goes without saying', phonetic: '/ɪt ɡoʊz wɪˈðaʊt ˈseɪ.ɪŋ/', meaning: 'rõ ràng là, không cần phải nói cũng biết', pos: 'expression', level: 'B2', en: 'It goes without saying that practice makes perfect.', vi: 'Rõ ràng là luyện tập nhiều sẽ tạo nên sự hoàn hảo.', n: 'Mẫu câu giao tiếp thông dụng' },
 ];
 
@@ -51,7 +52,8 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setWord(cardToEdit.word || '');
       setPhonetic(cardToEdit.phonetic || '');
       setMeaning(cardToEdit.meaning || '');
-      setPartOfSpeech(cardToEdit.part_of_speech || 'noun');
+      const rawPos = (cardToEdit.part_of_speech || 'noun').toLowerCase();
+      setPartOfSpeech(rawPos === 'modal_verb' || rawPos === 'modalverb' ? 'modal verb' : rawPos);
       setLevel(cardToEdit.level || 'B1');
       setExampleEn(cardToEdit.example_en || '');
       setExampleVi(cardToEdit.example_vi || '');
@@ -85,6 +87,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
   const posOptions = [
     { value: 'noun', label: 'Danh từ (n)' },
     { value: 'verb', label: 'Động từ (v)' },
+    { value: 'modal verb', label: 'Động từ khuyết thiếu (Modal verb)' },
     { value: 'adjective', label: 'Tính từ (adj)' },
     { value: 'adverb', label: 'Trạng từ (adv)' },
     { value: 'preposition', label: 'Giới từ (prep)' },
