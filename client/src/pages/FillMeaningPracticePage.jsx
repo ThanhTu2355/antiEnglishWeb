@@ -182,6 +182,7 @@ export default function FillMeaningPracticePage() {
         });
       } else {
         setStreak(0);
+        refreshUser?.();
       }
 
       setHistoryResults(prev => [
@@ -855,10 +856,14 @@ export default function FillMeaningPracticePage() {
                 {checkedResult.note && (
                   <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium pt-1">💡 {checkedResult.note}</p>
                 )}
-                {checkedResult.interval !== undefined && (
-                  <p className="text-[11px] text-indigo-700 dark:text-indigo-400 font-semibold pt-1 flex items-center gap-1">
-                    <span>📅 Lần ôn tiếp theo:</span>
-                    <span className="font-bold underline">sau {formatInterval(checkedResult.interval)}</span>
+                {!checkedResult.is_correct ? (
+                  <div className="pt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-400">
+                    <Flame className="w-3.5 h-3.5 text-rose-500 animate-pulse shrink-0" />
+                    <span>Đã chuyển sang "Chưa thuộc" & đưa vào danh sách Cần ôn tập hôm nay!</span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium pt-1">
+                    ✓ Chu kỳ ôn tập chính (Flashcard) được giữ nguyên, không thay đổi.
                   </p>
                 )}
               </div>

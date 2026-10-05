@@ -170,11 +170,22 @@ router.post('/check', async (req, res) => {
       expectedAnswer = card.word;
     }
 
-    // Update Spaced Repetition (SM-2)
-    const sm2Rating = isCorrect ? 'good' : 'again';
-    const sm2Update = calculateSM2(card, sm2Rating);
-    Object.assign(card, sm2Update);
-    await card.save();
+    // Option B: Trong phần luyện tập (Điền nghĩa, Gõ từ vựng, Trắc nghiệm):
+    // - Khi trả lời ĐÚNG: KHÔNG tăng chu kỳ ôn tập (interval, repetitions, next_review_date giữ nguyên)
+    // - Khi trả lời SAI: Bắt buộc phải ôn tập ngay (đến hạn hôm nay, chuyển sang chưa thuộc, reset interval = 0, repetitions = 0)
+    if (!isCorrect) {
+      card.status = 'unmastered';
+      card.repetitions = 0;
+      card.interval = 0;
+      card.next_review_date = new Date(); // Đến hạn ôn tập ngay hôm nay
+      card.last_reviewed_at = new Date();
+      card.ease_factor = Math.max(1.3, Math.round(((card.ease_factor || 2.5) - 0.2) * 100) / 100);
+      await card.save();
+    } else {
+      // Khi đúng: chỉ cập nhật mốc thời gian làm bài, tuyệt đối KHÔNG tăng chu kỳ ôn tập hay đẩy next_review_date ra xa
+      card.last_reviewed_at = new Date();
+      await card.save();
+    }
 
     res.json({
       is_correct: isCorrect,
