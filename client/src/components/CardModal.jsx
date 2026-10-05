@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import TTSButton from './TTSButton';
 import CustomSelect from './CustomSelect';
 import { CEFR_LEVELS } from '../utils/levels';
+import { checkEnglishSpelling } from '../utils/spelling';
 
 const SAMPLE_WORDS = [
   { word: 'resilience', phonetic: '/rɪˈzɪl.jəns/', meaning: 'khả năng phục hồi, kiên cường', pos: 'noun', level: 'C1', en: 'Courage and resilience are needed to face adversity.', vi: 'Lòng can đảm và sự kiên cường là cần thiết để đối mặt nghịch cảnh.', n: 'Gốc từ: resilire (bật lại)' },
@@ -33,6 +34,9 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [wordError, setWordError] = useState('');
+  const [meaningError, setMeaningError] = useState('');
+  const [wordSuggestion, setWordSuggestion] = useState(null);
 
   useEffect(() => {
     if (availableFolders && availableFolders.length > 0) {
@@ -53,7 +57,13 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setPhonetic(cardToEdit.phonetic || '');
       setMeaning(cardToEdit.meaning || '');
       const rawPos = (cardToEdit.part_of_speech || 'noun').toLowerCase();
-      setPartOfSpeech(rawPos === 'modal_verb' || rawPos === 'modalverb' || rawPos === 'model verb' || rawPos === 'model_verb' ? 'modal verb' : rawPos);
+      if (rawPos === 'modal_verb' || rawPos === 'modalverb' || rawPos === 'model verb' || rawPos === 'model_verb') {
+        setPartOfSpeech('modal verb');
+      } else if (rawPos === 'phrasal_verb' || rawPos === 'phrasalverb') {
+        setPartOfSpeech('phrasal verb');
+      } else {
+        setPartOfSpeech(rawPos);
+      }
       setLevel(cardToEdit.level || 'B1');
       setExampleEn(cardToEdit.example_en || '');
       setExampleVi(cardToEdit.example_vi || '');
@@ -75,6 +85,9 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       }
     }
     setError('');
+    setWordError('');
+    setMeaningError('');
+    setWordSuggestion(null);
   }, [cardToEdit, isOpen, folderId, folders]);
 
   const cefrOptions = CEFR_LEVELS.map(lvl => ({
@@ -88,9 +101,14 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
     { value: 'noun', label: 'Danh từ (n)' },
     { value: 'verb', label: 'Động từ (v)' },
     { value: 'modal verb', label: 'Modal verb' },
+    { value: 'phrasal verb', label: 'Cụm động từ (phrasal verb)' },
     { value: 'adjective', label: 'Tính từ (adj)' },
     { value: 'adverb', label: 'Trạng từ (adv)' },
+    { value: 'pronoun', label: 'Đại từ (pron)' },
     { value: 'preposition', label: 'Giới từ (prep)' },
+    { value: 'conjunction', label: 'Liên từ (conj)' },
+    { value: 'interjection', label: 'Thán từ (int)' },
+    { value: 'determiner', label: 'Từ hạn định (determiner)' },
     { value: 'phrase', label: 'Cụm từ (phrase)' },
     { value: 'idiom', label: 'Thành ngữ (idiom)' },
     { value: 'expression', label: 'Mẫu câu giao tiếp (Expression)' }
@@ -100,14 +118,38 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!word.trim() || !meaning.trim()) {
-      setError('Vui lòng nhập Từ vựng tiếng Anh và Nghĩa tiếng Việt');
-      return;
+    setError('');
+    setWordError('');
+    setMeaningError('');
+    setWordSuggestion(null);
+
+    let hasError = false;
+
+    if (!word.trim()) {
+      setWordError('Vui lòng nhập từ vựng tiếng Anh.');
+      hasError = true;
     }
+
+    if (!meaning.trim()) {
+      setMeaningError('Vui lòng nhập nghĩa tiếng Việt.');
+      hasError = true;
+    }
+
+    if (hasError) return;
 
     try {
       setLoading(true);
-      setError('');
+
+      // Kiểm tra tính hợp lệ & chính tả của từ tiếng Anh
+      const checkResult = await checkEnglishSpelling(word.trim());
+      if (!checkResult.valid) {
+        setWordError(checkResult.message);
+        if (checkResult.suggestion) {
+          setWordSuggestion(checkResult.suggestion);
+        }
+        setLoading(false);
+        return;
+      }
 
       const finalFolderId = (folderId && folderId !== 'all') 
         ? folderId 
@@ -191,7 +233,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 overflow-y-auto space-y-4">
           {error && (
             <div className="p-3 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-semibold">
               {error}
@@ -225,11 +267,19 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
               <div className="relative">
                 <input
                   type="text"
-                  required
                   value={word}
-                  onChange={(e) => setWord(e.target.value)}
+                  onChange={(e) => {
+                    setWord(e.target.value);
+                    if (wordError) setWordError('');
+                    if (wordSuggestion) setWordSuggestion(null);
+                    if (error) setError('');
+                  }}
                   placeholder="VD: comprehend"
-                  className="w-full pl-3.5 pr-10 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className={`w-full pl-3.5 pr-10 py-2.5 bg-input-theme border rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 transition-all ${
+                    wordError
+                      ? 'border-rose-500 ring-2 ring-rose-500/20'
+                      : 'border-theme focus:ring-indigo-500'
+                  }`}
                 />
                 {word.trim() && (
                   <div className="absolute right-2 top-2">
@@ -237,6 +287,31 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                   </div>
                 )}
               </div>
+              {wordError && (
+                <div className="text-xs text-rose-600 dark:text-rose-400 font-semibold mt-1.5 leading-relaxed">
+                  {wordSuggestion && wordError.includes(`(Gợi ý: "${wordSuggestion}").`) ? (
+                    <span>
+                      {wordError.replace(`(Gợi ý: "${wordSuggestion}").`, '')}
+                      (Gợi ý:{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWord(wordSuggestion);
+                          setWordError('');
+                          setWordSuggestion(null);
+                        }}
+                        className="underline font-bold hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer inline"
+                        title="Bấm để áp dụng gợi ý này"
+                      >
+                        "{wordSuggestion}"
+                      </button>
+                      ).
+                    </span>
+                  ) : (
+                    <span>{wordError}</span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -260,12 +335,24 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
             </label>
             <input
               type="text"
-              required
               value={meaning}
-              onChange={(e) => setMeaning(e.target.value)}
+              onChange={(e) => {
+                setMeaning(e.target.value);
+                if (meaningError) setMeaningError('');
+                if (error) setError('');
+              }}
               placeholder="hiểu, lĩnh hội sâu sắc"
-              className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full px-3.5 py-2.5 bg-input-theme border rounded-xl text-theme-main font-bold focus:outline-none focus:ring-2 transition-all ${
+                meaningError
+                  ? 'border-rose-500 ring-2 ring-rose-500/20'
+                  : 'border-theme focus:ring-indigo-500'
+              }`}
             />
+            {meaningError && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold mt-1.5">
+                {meaningError}
+              </p>
+            )}
           </div>
 
           {/* Level & Part of speech */}
