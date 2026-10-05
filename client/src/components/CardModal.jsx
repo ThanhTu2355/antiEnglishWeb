@@ -53,7 +53,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
       setPhonetic(cardToEdit.phonetic || '');
       setMeaning(cardToEdit.meaning || '');
       const rawPos = (cardToEdit.part_of_speech || 'noun').toLowerCase();
-      setPartOfSpeech(rawPos === 'modal_verb' || rawPos === 'modalverb' ? 'modal verb' : rawPos);
+      setPartOfSpeech(rawPos === 'modal_verb' || rawPos === 'modalverb' || rawPos === 'model verb' || rawPos === 'model_verb' ? 'modal verb' : rawPos);
       setLevel(cardToEdit.level || 'B1');
       setExampleEn(cardToEdit.example_en || '');
       setExampleVi(cardToEdit.example_vi || '');
@@ -87,7 +87,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
   const posOptions = [
     { value: 'noun', label: 'Danh từ (n)' },
     { value: 'verb', label: 'Động từ (v)' },
-    { value: 'modal verb', label: 'Động từ khuyết thiếu (Modal verb)' },
+    { value: 'modal verb', label: 'Modal verb' },
     { value: 'adjective', label: 'Tính từ (adj)' },
     { value: 'adverb', label: 'Trạng từ (adv)' },
     { value: 'preposition', label: 'Giới từ (prep)' },
