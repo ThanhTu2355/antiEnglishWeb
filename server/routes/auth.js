@@ -143,7 +143,8 @@ router.get('/me', authenticateToken, async (req, res) => {
       PracticeHistory.countDocuments({ user_id: req.user.id }),
       Card.countDocuments({
         user_id: user._id,
-        next_review_date: { $lte: endOfToday }
+        last_reviewed_at: { $ne: null },
+        next_review_date: { $ne: null, $lte: endOfToday }
       })
     ]);
 

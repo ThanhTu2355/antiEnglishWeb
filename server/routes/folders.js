@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
           mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
           unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
           learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
-          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
+          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$last_reviewed_at', null] }, { $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
         }
       }
     ]);
@@ -70,7 +70,7 @@ router.get('/all', async (req, res) => {
           mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
           unmastered_count: { $sum: { $cond: [{ $eq: ['$status', 'unmastered'] }, 1, 0] } },
           learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
-          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
+          due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$last_reviewed_at', null] }, { $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
         }
       }
     ]);
@@ -145,7 +145,7 @@ router.get('/:id', async (req, res) => {
             mastered_count: { $sum: { $cond: [{ $eq: ['$status', 'mastered'] }, 1, 0] } },
             unmastered_count: { $sum: { $cond: [{ $ne: ['$status', 'mastered'] }, 1, 0] } },
             learning_count: { $sum: { $cond: [{ $eq: ['$status', 'learning'] }, 1, 0] } },
-            due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
+            due_count: { $sum: { $cond: [{ $and: [{ $ne: ['$last_reviewed_at', null] }, { $ne: ['$next_review_date', null] }, { $lte: ['$next_review_date', now] }] }, 1, 0] } }
           }
         }
       ])

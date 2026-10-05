@@ -17,7 +17,8 @@ router.get('/due/count', async (req, res) => {
     endOfToday.setHours(23, 59, 59, 999);
     const filter = {
       user_id: userId,
-      next_review_date: { $lte: endOfToday }
+      last_reviewed_at: { $ne: null },
+      next_review_date: { $ne: null, $lte: endOfToday }
     };
 
     if (folder_id && folder_id !== 'all' && mongoose.Types.ObjectId.isValid(folder_id)) {
@@ -48,7 +49,8 @@ router.get('/', async (req, res) => {
     if (due === 'true' || status === 'due') {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
-      filter.next_review_date = { $lte: endOfToday };
+      filter.last_reviewed_at = { $ne: null };
+      filter.next_review_date = { $ne: null, $lte: endOfToday };
     } else if (status && status !== 'all') {
       filter.status = status;
     }
@@ -146,7 +148,9 @@ router.post('/', async (req, res) => {
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim(),
-      status: ['new', 'learning', 'unmastered', 'mastered'].includes(status) ? status : 'new'
+      status: ['new', 'learning', 'unmastered', 'mastered'].includes(status) ? status : 'new',
+      next_review_date: null,
+      last_reviewed_at: null
     });
 
     if (validFolderId) {
@@ -195,7 +199,9 @@ router.post('/bulk', async (req, res) => {
         example_en: (c.example_en || '').trim(),
         example_vi: (c.example_vi || '').trim(),
         note: (c.note || '').trim(),
-        status: 'new'
+        status: 'new',
+        next_review_date: null,
+        last_reviewed_at: null
       });
     }
 
@@ -338,6 +344,24 @@ router.patch('/:id/status', async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy thẻ từ vựng' });
     }
 
+    if (status === 'new') {
+      card.status = 'new';
+      card.repetitions = 0;
+      card.interval = 0;
+      card.next_review_date = null;
+      card.last_reviewed_at = null;
+      await card.save();
+
+      const cardJson = card.toJSON();
+      cardJson.projected_intervals = getProjectedIntervals(card);
+
+      return res.json({
+        message: 'Cập nhật trạng thái thành công',
+        status: card.status,
+        card: cardJson
+      });
+    }
+
     const effectiveRating = rating || (
       status === 'mastered' ? 'easy' :
       status === 'unmastered' ? 'again' :
@@ -345,7 +369,7 @@ router.patch('/:id/status', async (req, res) => {
     );
 
     const sm2Update = calculateSM2(card, effectiveRating);
-    if (status && ['new', 'learning', 'unmastered', 'mastered'].includes(status)) {
+    if (status && ['learning', 'unmastered', 'mastered'].includes(status)) {
       sm2Update.status = status;
     }
 

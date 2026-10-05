@@ -75,7 +75,7 @@ const cardSchema = new mongoose.Schema({
   },
   next_review_date: {
     type: Date,
-    default: Date.now,
+    default: null,
     index: true
   },
   last_reviewed_at: {

@@ -50,7 +50,8 @@ export function formatInterval(days) {
 }
 
 export function isCardDue(card) {
-  if (!card || !card.next_review_date) return true;
+  // Thẻ mới chưa từng được đánh giá 1, 2, 3, 4 lần nào thì chưa vào chu kỳ ôn tập
+  if (!card || !card.last_reviewed_at || !card.next_review_date) return false;
   const reviewDate = new Date(card.next_review_date);
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
