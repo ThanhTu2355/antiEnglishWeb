@@ -21,7 +21,8 @@ export default function TTSButton({ text, lang = 'en-US', className = '', size =
     <button
       type="button"
       onClick={speak}
-      title="Nghe phát âm chuẩn"
+      data-tooltip="Nghe phát âm chuẩn"
+      aria-label="Nghe phát âm chuẩn"
       className={`inline-flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
         speaking
           ? 'bg-indigo-500 text-white scale-110 shadow-lg shadow-indigo-500/50 animate-pulse'

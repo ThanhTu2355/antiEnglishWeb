@@ -12,25 +12,54 @@ export default function GlobalTooltip() {
   const activeElementRef = useRef(null);
 
   useEffect(() => {
-    function handleMouseOver(e) {
-      const target = e.target.closest('[data-tooltip], [title]');
-      if (!target) return;
+    function convertTitle(el) {
+      if (el && el.hasAttribute && el.hasAttribute('title')) {
+        const val = el.getAttribute('title');
+        if (val && val.trim()) {
+          el.setAttribute('data-tooltip', val.trim());
+        }
+        el.removeAttribute('title');
+      }
+    }
 
-      const rawText = target.getAttribute('data-tooltip') || target.getAttribute('title');
+    // Convert any existing title attributes to data-tooltip on mount
+    document.querySelectorAll('[title]').forEach(convertTitle);
+
+    // Watch for dynamically added or re-rendered title attributes to prevent browser native tooltips
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'title') {
+          convertTitle(m.target);
+        } else if (m.type === 'childList') {
+          m.addedNodes.forEach(node => {
+            if (node.nodeType === 1) {
+              convertTitle(node);
+              node.querySelectorAll?.('[title]')?.forEach(convertTitle);
+            }
+          });
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['title'],
+      childList: true,
+      subtree: true,
+    });
+
+    function showTooltipFor(target) {
+      if (!target) return;
+      convertTitle(target);
+
+      const rawText = target.getAttribute('data-tooltip');
       if (!rawText || !rawText.trim()) return;
 
       const text = rawText.trim();
-
-      // Suppress native browser title popup
-      if (target.hasAttribute('title')) {
-        target.setAttribute('data-original-title', text);
-        target.removeAttribute('title');
-      }
-
       activeElementRef.current = target;
 
       const rect = target.getBoundingClientRect();
-      const placeTop = rect.top >= 48; // if enough space on top, show on top
+      const placeTop = rect.top >= 48;
 
       setTooltip({
         visible: true,
@@ -41,35 +70,53 @@ export default function GlobalTooltip() {
       });
     }
 
+    function handleMouseOver(e) {
+      const target = e.target.closest?.('[data-tooltip], [title]');
+      if (!target) return;
+      showTooltipFor(target);
+    }
+
     function handleMouseOut(e) {
-      const target = activeElementRef.current;
-      if (target) {
-        // Restore title if needed
-        if (target.hasAttribute('data-original-title')) {
-          target.setAttribute('title', target.getAttribute('data-original-title'));
-          target.removeAttribute('data-original-title');
-        }
+      const current = activeElementRef.current;
+      if (!current) return;
+
+      // If cursor is still within the current target or its children, don't dismiss
+      if (e && e.relatedTarget && current.contains(e.relatedTarget)) {
+        return;
       }
+
       activeElementRef.current = null;
       setTooltip(prev => ({ ...prev, visible: false }));
     }
 
-    function handleScrollOrClick() {
-      if (activeElementRef.current) {
-        handleMouseOut();
+    function handleClick(e) {
+      // If clicking inside the active element (e.g. clicking the TTS button while hovering),
+      // keep the beautiful tooltip visible and adjust anchor position if needed
+      if (activeElementRef.current && activeElementRef.current.contains(e.target)) {
+        showTooltipFor(activeElementRef.current);
+        return;
       }
+      // If clicking elsewhere, hide tooltip
+      activeElementRef.current = null;
+      setTooltip(prev => ({ ...prev, visible: false }));
+    }
+
+    function handleScroll() {
+      activeElementRef.current = null;
+      setTooltip(prev => ({ ...prev, visible: false }));
     }
 
     document.addEventListener('mouseover', handleMouseOver, true);
     document.addEventListener('mouseout', handleMouseOut, true);
-    window.addEventListener('scroll', handleScrollOrClick, true);
-    window.addEventListener('click', handleScrollOrClick, true);
+    window.addEventListener('click', handleClick, true);
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
+      observer.disconnect();
       document.removeEventListener('mouseover', handleMouseOver, true);
       document.removeEventListener('mouseout', handleMouseOut, true);
-      window.removeEventListener('scroll', handleScrollOrClick, true);
-      window.removeEventListener('click', handleScrollOrClick, true);
+      window.removeEventListener('click', handleClick, true);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, []);
 
