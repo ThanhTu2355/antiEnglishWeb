@@ -168,7 +168,8 @@ export default function FlashcardStudyPage() {
   }
 
   function handleNext(targetCards = cards) {
-    if (currentIndex < targetCards.length - 1) {
+    const list = Array.isArray(targetCards) ? targetCards : cards;
+    if (currentIndex < list.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setIsFlipped(false);
     } else {
@@ -956,7 +957,7 @@ export default function FlashcardStudyPage() {
         {/* 2 Nút Điều hướng Thẻ trước & Kế tiếp */}
         <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
           <button
-            onClick={handlePrev}
+            onClick={() => handlePrev()}
             disabled={currentIndex === 0}
             className="py-3 px-3 rounded-2xl bg-surface hover:bg-surface-hover text-theme-main text-xs sm:text-sm font-bold border border-theme shadow-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
           >
@@ -964,7 +965,7 @@ export default function FlashcardStudyPage() {
           </button>
 
           <button
-            onClick={handleNext}
+            onClick={() => handleNext()}
             className="py-3 px-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             Kế tiếp →
