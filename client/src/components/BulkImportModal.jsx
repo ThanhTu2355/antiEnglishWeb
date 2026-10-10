@@ -203,7 +203,7 @@ export default function BulkImportModal({ isOpen, onClose, folderId, onImported,
               options={CEFR_LEVELS.map(lvl => ({
                 value: lvl.id,
                 label: lvl.label,
-                badge: lvl.id,
+                badge: lvl.id === 'Specialized' ? 'Chuyên ngành' : lvl.id,
                 badgeClass: lvl.badgeClass
               }))}
               className="w-full"

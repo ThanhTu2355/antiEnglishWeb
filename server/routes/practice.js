@@ -65,6 +65,8 @@ router.get('/questions', async (req, res) => {
       const norm = level.trim().toUpperCase();
       if (norm === 'OTHER') {
         matchFilter.level = { $in: ['OTHER', 'Other'] };
+      } else if (norm === 'SPECIALIZED' || norm === 'ESP' || norm === 'CHUYEN_NGANH') {
+        matchFilter.level = { $in: ['SPECIALIZED', 'Specialized', 'ESP'] };
       } else {
         matchFilter.level = norm;
       }

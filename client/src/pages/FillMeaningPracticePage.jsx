@@ -343,11 +343,11 @@ export default function FillMeaningPracticePage() {
             <label className="block text-xs font-bold text-theme-main uppercase tracking-wider mb-2">
               2. Lọc theo Cấp bậc CEFR
             </label>
-            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedLevel('all')}
-                className={`py-2 px-2 text-xs font-extrabold rounded-xl border transition-all cursor-pointer ${
+                className={`py-2 px-3 text-xs font-extrabold rounded-xl border transition-all cursor-pointer ${
                   selectedLevel === 'all'
                     ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
                     : 'bg-surface border-theme text-theme-muted hover:bg-surface-hover'
@@ -360,13 +360,13 @@ export default function FillMeaningPracticePage() {
                   key={lvl.id}
                   type="button"
                   onClick={() => setSelectedLevel(lvl.id)}
-                  className={`py-2 px-2 text-xs font-extrabold rounded-xl border transition-all cursor-pointer ${
+                  className={`py-2 px-3 text-xs font-extrabold rounded-xl border transition-all cursor-pointer ${
                     selectedLevel === lvl.id
                       ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
                       : 'bg-surface border-theme text-theme-muted hover:bg-surface-hover'
                   }`}
                 >
-                  {lvl.id}
+                  {lvl.name || lvl.id}
                 </button>
               ))}
             </div>

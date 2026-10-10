@@ -5,18 +5,22 @@ export const CEFR_LEVELS = [
   { id: 'B2', name: 'B2', label: 'B2 - Trung cao (Upper-Intermediate)', badgeClass: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-500/30' },
   { id: 'C1', name: 'C1', label: 'C1 - Nâng cao (Advanced)', badgeClass: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30' },
   { id: 'C2', name: 'C2', label: 'C2 - Thành thạo (Proficiency)', badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' },
-  { id: 'Other', name: 'Other', label: 'Other - Khác / Chuyên ngành', badgeClass: 'bg-slate-200/90 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-400/80 dark:border-slate-600 font-black' },
+  { id: 'Specialized', name: 'Chuyên ngành', label: 'Từ vựng chuyên ngành (ESP / Technical)', badgeClass: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30' },
+  { id: 'Other', name: 'Khác', label: 'Khác (Other)', badgeClass: 'bg-slate-200/90 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-400/80 dark:border-slate-600 font-bold' },
 ];
 
 export function getLevelBadge(level) {
   const norm = (level || '').trim().toUpperCase();
+  if (norm === 'SPECIALIZED' || norm === 'ESP' || norm === 'CHUYEN_NGANH') {
+    return CEFR_LEVELS.find(l => l.id === 'Specialized');
+  }
   const found = CEFR_LEVELS.find(l => l.id.toUpperCase() === norm);
   return found || {
     id: norm === 'OTHER' ? 'Other' : (norm || 'B1'),
-    name: norm === 'OTHER' ? 'Other' : (norm || 'B1'),
-    label: norm === 'OTHER' ? 'Other - Khác / Chuyên ngành' : `${norm || 'B1'} - Trung cấp`,
+    name: norm === 'OTHER' ? 'Khác' : (norm || 'B1'),
+    label: norm === 'OTHER' ? 'Khác (Other)' : `${norm || 'B1'} - Trung cấp`,
     badgeClass: norm === 'OTHER' 
-      ? 'bg-slate-200/90 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-400/80 dark:border-slate-600 font-black' 
+      ? 'bg-slate-200/90 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-400/80 dark:border-slate-600 font-bold' 
       : 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/30'
   };
 }

@@ -92,8 +92,12 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
 
   const cefrOptions = CEFR_LEVELS.map(lvl => ({
     value: lvl.id,
-    label: lvl.id === 'Other' ? 'Other - Khác' : lvl.id,
-    badge: lvl.id,
+    label: lvl.id === 'Specialized' 
+      ? 'Từ vựng chuyên ngành' 
+      : lvl.id === 'Other' 
+      ? 'Khác (Other)' 
+      : `Cấp ${lvl.id} - ${lvl.label.split(' - ')[1] || lvl.id}`,
+    badge: lvl.id === 'Specialized' ? 'Chuyên ngành' : lvl.id,
     badgeClass: lvl.badgeClass
   }));
 
@@ -140,15 +144,18 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
     try {
       setLoading(true);
 
-      // Kiểm tra tính hợp lệ & chính tả của từ tiếng Anh
-      const checkResult = await checkEnglishSpelling(word.trim());
-      if (!checkResult.valid) {
-        setWordError(checkResult.message);
-        if (checkResult.suggestion) {
-          setWordSuggestion(checkResult.suggestion);
+      // Kiểm tra tính hợp lệ & chính tả của từ tiếng Anh (bỏ qua nếu đang sửa và từ không đổi)
+      const isWordChanged = !cardToEdit || (cardToEdit.word?.trim().toLowerCase() !== word.trim().toLowerCase());
+      if (isWordChanged) {
+        const checkResult = await checkEnglishSpelling(word.trim());
+        if (!checkResult.valid) {
+          setWordError(checkResult.message);
+          if (checkResult.suggestion) {
+            setWordSuggestion(checkResult.suggestion);
+          }
+          setLoading(false);
+          return;
         }
-        setLoading(false);
-        return;
       }
 
       const finalFolderId = (folderId && folderId !== 'all') 
@@ -171,13 +178,16 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
         payload.status = cardToEdit.status;
       }
 
+      let savedCard;
       if (cardToEdit) {
-        await api.cards.update(cardToEdit.id || cardToEdit._id, payload);
+        const res = await api.cards.update(cardToEdit.id || cardToEdit._id, payload);
+        savedCard = res?.card || { ...cardToEdit, ...payload };
       } else {
-        await api.cards.create(payload);
+        const res = await api.cards.create(payload);
+        savedCard = res?.card;
       }
 
-      onSaved();
+      onSaved?.(savedCard, !!cardToEdit);
       onClose();
     } catch (err) {
       setError(err.message);

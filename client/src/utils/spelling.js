@@ -3,6 +3,54 @@
  * Uses regex for format checking and Datamuse API for fast dictionary validation.
  */
 
+const spellingCache = new Map();
+
+// 3. Kiểm tra từng từ đơn lẻ qua Datamuse API (nhanh có cache LRU)
+async function checkSingleWord(w) {
+  const clean = w.toLowerCase().replace(/[^a-z\-']/g, '');
+  // Bỏ qua các từ đơn cực ngắn như 'a', 'I'
+  if (!clean || clean.length <= 1) return { valid: true };
+
+  if (spellingCache.has(clean)) {
+    return spellingCache.get(clean);
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+
+    const res = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(clean)}&max=2`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return { valid: true }; // Dự phòng nếu dịch vụ ngoài tạm gián đoạn
+
+    const data = await res.json();
+    let result = { valid: false, suggestion: null };
+
+    if (Array.isArray(data) && data.length > 0) {
+      const isExact = data.some(item => item.word.toLowerCase() === clean);
+      if (isExact) {
+        result = { valid: true };
+      } else {
+        result = {
+          valid: false,
+          suggestion: data[0].word
+        };
+      }
+    }
+
+    if (spellingCache.size < 500) {
+      spellingCache.set(clean, result);
+    }
+    return result;
+  } catch {
+    // Trong trường hợp offline / mất mạng hoặc quá thời gian, không chặn người dùng
+    return { valid: true };
+  }
+}
+
 export async function checkEnglishSpelling(input) {
   const text = (input || '').trim();
   if (!text) {
@@ -27,41 +75,6 @@ export async function checkEnglishSpelling(input) {
     };
   }
 
-  // 3. Kiểm tra từng từ đơn lẻ qua Datamuse API (nhanh < 250ms)
-  async function checkSingleWord(w) {
-    const clean = w.toLowerCase().replace(/[^a-z\-']/g, '');
-    // Bỏ qua các từ đơn cực ngắn như 'a', 'I'
-    if (!clean || clean.length <= 1) return { valid: true };
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-      const res = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(clean)}&max=2`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (!res.ok) return { valid: true }; // Dự phòng nếu dịch vụ ngoài tạm gián đoạn
-
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const isExact = data.some(item => item.word.toLowerCase() === clean);
-        if (isExact) return { valid: true };
-
-        return {
-          valid: false,
-          suggestion: data[0].word
-        };
-      }
-
-      return { valid: false, suggestion: null };
-    } catch {
-      // Trong trường hợp offline / mất mạng, không chặn người dùng
-      return { valid: true };
-    }
-  }
-
   const cleanText = text.toLowerCase().replace(/[.,!?]+$/, '').trim();
 
   // A. Trường hợp từ đơn (không có dấu cách)
@@ -83,16 +96,18 @@ export async function checkEnglishSpelling(input) {
   const wholeCheck = await checkSingleWord(cleanText);
   if (wholeCheck.valid) return { valid: true };
 
-  // Kiểm tra từng từ trong cụm từ
-  const words = cleanText.split(/\s+/);
-  for (const w of words) {
-    const single = await checkSingleWord(w);
+  // Kiểm tra song song các từ trong cụm từ bằng Promise.all thay vì đợi tuần tự
+  const words = cleanText.split(/\s+/).filter(w => w.length > 1);
+  const results = await Promise.all(words.map(w => checkSingleWord(w)));
+
+  for (let i = 0; i < results.length; i++) {
+    const single = results[i];
     if (!single.valid) {
       const suggest = single.suggestion ? ` (Gợi ý: "${single.suggestion}")` : '';
       return {
         valid: false,
         suggestion: single.suggestion,
-        message: `Từ "${w}" trong cụm từ bị sai chính tả${suggest}.`
+        message: `Từ "${words[i]}" trong cụm từ bị sai chính tả${suggest}.`
       };
     }
   }

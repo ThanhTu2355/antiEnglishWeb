@@ -39,12 +39,12 @@ export default function FolderDetailPage() {
     loadData();
   }, [folderId]);
 
-  async function loadData() {
+  async function loadData(showSpinner = true) {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const promises = [
         api.folders.getById(folderId),
-        api.cards.getAll({ folder_id: folderId })
+        api.cards.getAll(folderId !== 'all' ? { folder_id: folderId } : {})
       ];
       if (folderId === 'all') {
         promises.push(api.folders.getAll());
@@ -56,7 +56,7 @@ export default function FolderDetailPage() {
     } catch (err) {
       console.error('Failed to load folder details:', err);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }
 
@@ -71,17 +71,21 @@ export default function FolderDetailPage() {
 
   async function handleConfirmDeleteCard() {
     if (!cardToDelete) return;
+    const targetCard = cardToDelete;
+    const targetId = targetCard.id || targetCard._id;
+
+    // Cập nhật giao diện lập tức (Optimistic UI) - không giật/khựng
+    setCardToDelete(null);
+    setCards(prev => prev.filter(c => (c.id || c._id) !== targetId));
+    setFolder(prev => prev ? { ...prev, card_count: Math.max(0, (prev.card_count || 1) - 1) } : prev);
+    showToast(`Đã xóa từ "${targetCard.word}"`);
+
     try {
-      setIsDeleting(true);
-      await api.cards.delete(cardToDelete.id);
-      showToast(`Đã xóa từ "${cardToDelete.word}"`);
-      setCardToDelete(null);
-      await loadData();
+      await api.cards.delete(targetId);
       refreshUser?.();
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa từ vựng');
-    } finally {
-      setIsDeleting(false);
+      loadData(false);
     }
   }
 
@@ -185,9 +189,9 @@ export default function FolderDetailPage() {
     },
     ...CEFR_LEVELS.map(lvl => ({
       value: lvl.id,
-      label: lvl.id === 'Other' ? 'Other (Khác)' : `Cấp ${lvl.id}`,
+      label: lvl.id === 'Specialized' ? 'Từ vựng chuyên ngành' : lvl.id === 'Other' ? 'Khác (Other)' : `Cấp ${lvl.id}`,
       count: cards.filter(c => (c.level || 'B1').trim().toUpperCase() === lvl.id.trim().toUpperCase()).length,
-      badge: lvl.id,
+      badge: lvl.id === 'Specialized' ? 'Chuyên ngành' : lvl.id,
       badgeClass: lvl.badgeClass
     }))
   ];
@@ -544,9 +548,17 @@ export default function FolderDetailPage() {
         folderId={folderId}
         cardToEdit={cardToEdit}
         availableFolders={allFolders}
-        onSaved={() => {
-          showToast(cardToEdit ? 'Đã cập nhật từ vựng' : 'Đã thêm từ mới!');
-          loadData();
+        onSaved={(savedCard, isEdit) => {
+          showToast(isEdit ? 'Đã cập nhật từ vựng' : 'Đã thêm từ mới!');
+          if (savedCard) {
+            if (isEdit) {
+              setCards(prev => prev.map(c => (c.id === savedCard.id || c._id === savedCard.id) ? { ...c, ...savedCard } : c));
+            } else {
+              setCards(prev => [savedCard, ...prev]);
+              setFolder(prev => prev ? { ...prev, card_count: (prev.card_count || 0) + 1 } : prev);
+            }
+          }
+          loadData(false);
           refreshUser?.();
         }}
       />
@@ -558,7 +570,7 @@ export default function FolderDetailPage() {
         availableFolders={allFolders}
         onImported={() => {
           showToast('Đã nhập hàng loạt từ vựng!');
-          loadData();
+          loadData(false);
           refreshUser?.();
         }}
       />

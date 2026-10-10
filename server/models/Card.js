@@ -52,7 +52,7 @@ const cardSchema = new mongoose.Schema({
   },
   level: {
     type: String,
-    enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'OTHER', 'Other'],
+    enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'OTHER', 'Other', 'SPECIALIZED', 'Specialized', 'ESP'],
     default: 'B1',
     index: true
   },

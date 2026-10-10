@@ -44,20 +44,23 @@ export default function FolderModal({ isOpen, onClose, folderToEdit, onSaved }) 
     try {
       setLoading(true);
       setError('');
+      let savedFolder;
       if (folderToEdit) {
-        await api.folders.update(folderToEdit.id, {
+        const res = await api.folders.update(folderToEdit.id, {
           name: name.trim(),
           description: description.trim(),
           color
         });
+        savedFolder = res?.folder || { ...folderToEdit, name: name.trim(), description: description.trim(), color };
       } else {
-        await api.folders.create({
+        const res = await api.folders.create({
           name: name.trim(),
           description: description.trim(),
           color
         });
+        savedFolder = res?.folder;
       }
-      onSaved();
+      onSaved?.(savedFolder, !!folderToEdit);
       onClose();
     } catch (err) {
       setError(err.message);

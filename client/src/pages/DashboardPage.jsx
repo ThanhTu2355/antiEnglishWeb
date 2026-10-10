@@ -31,9 +31,9 @@ export default function DashboardPage() {
     refreshUser?.();
   }, []);
 
-  async function loadFolders() {
+  async function loadFolders(showSpinner = true) {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const [foldersData, allData] = await Promise.all([
         api.folders.getAll(),
         api.folders.getById('all').catch(() => null)
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to load folders:', err);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   }
 
@@ -59,17 +59,20 @@ export default function DashboardPage() {
 
   async function handleConfirmDeleteFolder() {
     if (!folderToDelete) return;
+    const targetFolder = folderToDelete;
+    const targetId = targetFolder.id;
+
+    // Cập nhật giao diện lập tức (Optimistic UI) - không giật/khựng
+    setFolderToDelete(null);
+    setFolders(prev => prev.filter(f => f.id !== targetId));
+    showToast(`Đã xóa thư mục "${targetFolder.name}". Toàn bộ từ vựng vẫn được lưu giữ an toàn trong Tất cả từ vựng.`);
+
     try {
-      setIsDeleting(true);
-      await api.folders.delete(folderToDelete.id);
-      showToast(`Đã xóa thư mục "${folderToDelete.name}". Toàn bộ từ vựng vẫn được lưu giữ an toàn trong Tất cả từ vựng.`);
-      setFolderToDelete(null);
-      await loadFolders();
+      await api.folders.delete(targetId);
       refreshUser?.();
     } catch (err) {
       showToast(err.message || 'Lỗi khi xóa thư mục');
-    } finally {
-      setIsDeleting(false);
+      loadFolders(false);
     }
   }
 
@@ -602,9 +605,16 @@ export default function DashboardPage() {
         isOpen={isFolderModalOpen}
         onClose={() => setIsFolderModalOpen(false)}
         folderToEdit={folderToEdit}
-        onSaved={() => {
-          showToast(folderToEdit ? 'Đã cập nhật thư mục' : 'Đã tạo thư mục mới!');
-          loadFolders();
+        onSaved={(savedFolder, isEdit) => {
+          showToast(isEdit ? 'Đã cập nhật thư mục' : 'Đã tạo thư mục mới!');
+          if (savedFolder) {
+            if (isEdit) {
+              setFolders(prev => prev.map(f => f.id === savedFolder.id ? { ...f, ...savedFolder } : f));
+            } else {
+              setFolders(prev => [...prev, { ...savedFolder, card_count: 0 }]);
+            }
+          }
+          loadFolders(false);
           refreshUser?.();
         }}
       />
@@ -615,7 +625,7 @@ export default function DashboardPage() {
         folders={folders}
         onMerged={(msg) => {
           showToast(msg);
-          loadFolders();
+          loadFolders(false);
           refreshUser?.();
         }}
       />

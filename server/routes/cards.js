@@ -8,6 +8,13 @@ const { calculateSM2, getProjectedIntervals } = require('../utils/sm2');
 const router = express.Router();
 router.use(authenticateToken);
 
+function formatLevel(lvl, fallback = 'B1') {
+  const norm = (lvl || fallback).trim().toUpperCase();
+  if (norm === 'OTHER') return 'Other';
+  if (norm === 'SPECIALIZED' || norm === 'ESP' || norm === 'CHUYEN_NGANH') return 'Specialized';
+  return norm;
+}
+
 // Count cards due for review (must be before /:id)
 router.get('/due/count', async (req, res) => {
   try {
@@ -59,6 +66,8 @@ router.get('/', async (req, res) => {
       const norm = level.trim().toUpperCase();
       if (norm === 'OTHER') {
         filter.level = { $in: ['OTHER', 'Other'] };
+      } else if (norm === 'SPECIALIZED' || norm === 'ESP' || norm === 'CHUYEN_NGANH') {
+        filter.level = { $in: ['SPECIALIZED', 'Specialized', 'ESP'] };
       } else {
         filter.level = norm;
       }
@@ -144,7 +153,7 @@ router.post('/', async (req, res) => {
       phonetic: phonetic.trim(),
       meaning: meaning.trim(),
       part_of_speech: part_of_speech.trim(),
-      level: (level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (level || 'B1').trim().toUpperCase(),
+      level: formatLevel(level, 'B1'),
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim(),
@@ -195,7 +204,7 @@ router.post('/bulk', async (req, res) => {
         phonetic: (c.phonetic || '').trim(),
         meaning: c.meaning.trim(),
         part_of_speech: (c.part_of_speech || 'noun').trim(),
-        level: (c.level || default_level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (c.level || default_level || 'B1').trim().toUpperCase(),
+        level: formatLevel(c.level || default_level, 'B1'),
         example_en: (c.example_en || '').trim(),
         example_vi: (c.example_vi || '').trim(),
         note: (c.note || '').trim(),
@@ -254,7 +263,7 @@ router.put('/:id', async (req, res) => {
       phonetic: phonetic.trim(),
       meaning: meaning.trim(),
       part_of_speech: part_of_speech.trim(),
-      level: (level || '').trim().toUpperCase() === 'OTHER' ? 'Other' : (level || 'B1').trim().toUpperCase(),
+      level: formatLevel(level, 'B1'),
       example_en: example_en.trim(),
       example_vi: example_vi.trim(),
       note: note.trim()

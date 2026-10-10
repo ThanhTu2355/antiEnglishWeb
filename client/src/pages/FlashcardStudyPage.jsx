@@ -184,8 +184,8 @@ export default function FlashcardStudyPage() {
     }
   }
 
-  async function handleRate(rating) {
-    if (cards.length === 0) return;
+  function handleRate(rating) {
+    if (cards.length === 0 || currentIndex >= cards.length) return;
     const currentCard = cards[currentIndex];
 
     // Giải pháp 4: Tự động xếp từ 'Khó' (phím 2) hoặc 'Quên' (phím 1) vào cuối phiên học
@@ -218,17 +218,18 @@ export default function FlashcardStudyPage() {
       setCards(updatedCards);
     }
 
-    try {
-      const res = await api.cards.review(currentCard.id, rating);
-      if (res?.card?.status === 'mastered' || rating === 'easy') {
-        setMasteredCount(prev => prev + 1);
-      }
-      refreshUser?.();
-      handleNext(updatedCards);
-    } catch (err) {
-      console.error(err);
-      handleNext(updatedCards);
+    // Cập nhật số từ đã thuộc ngay lập tức (Optimistic)
+    if (rating === 'easy' || currentCard.status === 'mastered') {
+      setMasteredCount(prev => prev + 1);
     }
+
+    // CHUYỂN THẺ LẬP TỨC (0ms) - không chặn giao diện chờ mạng để trải nghiệm mượt mà tuyệt đối
+    handleNext(updatedCards);
+
+    // Gửi kết quả đánh giá lên server chạy nền (Background sync)
+    api.cards.review(currentCard.id, rating).catch(err => {
+      console.error('Lỗi lưu đánh giá ôn tập:', err);
+    });
   }
 
   function triggerCompletion() {
@@ -380,8 +381,8 @@ export default function FlashcardStudyPage() {
     },
     ...CEFR_LEVELS.map(lvl => ({
       value: lvl.id,
-      label: lvl.id === 'Other' ? 'Other (Khác)' : `Cấp ${lvl.id}`,
-      badge: lvl.id,
+      label: lvl.id === 'Specialized' ? 'Từ vựng chuyên ngành' : lvl.id === 'Other' ? 'Khác (Other)' : `Cấp ${lvl.id}`,
+      badge: lvl.id === 'Specialized' ? 'Chuyên ngành' : lvl.id,
       badgeClass: lvl.badgeClass
     }))
   ];
