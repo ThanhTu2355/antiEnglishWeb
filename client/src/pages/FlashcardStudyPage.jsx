@@ -565,7 +565,7 @@ export default function FlashcardStudyPage() {
                     {currentCard.word}
                   </h2>
                   {currentCard.phonetic && (
-                    <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
+                    <p className="text-xl text-indigo-600 dark:text-indigo-400 font-medium tracking-normal">
                       {currentCard.phonetic}
                     </p>
                   )}
@@ -846,7 +846,7 @@ export default function FlashcardStudyPage() {
                     {currentCard.word}
                   </h2>
                   {currentCard.phonetic && (
-                    <p className="text-xl font-mono text-indigo-600 dark:text-indigo-400 font-bold tracking-wide">
+                    <p className="text-xl text-indigo-600 dark:text-indigo-400 font-medium tracking-normal">
                       {currentCard.phonetic}
                     </p>
                   )}

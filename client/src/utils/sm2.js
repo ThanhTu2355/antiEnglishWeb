@@ -13,27 +13,49 @@ export function calculateSM2Preview(card, rating) {
   else if (rating === 'good' || rating === 'learning' || rating === 4) quality = 4;
   else if (rating === 'easy' || rating === 'mastered' || rating === 5) quality = 5;
 
-  let newEaseFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-  if (newEaseFactor < 1.3) newEaseFactor = 1.3;
-  if (newEaseFactor > 3.0) newEaseFactor = 3.0;
+  if (quality < 3) return 1;
 
-  let newInterval = 1;
-
-  if (quality < 3) {
-    newInterval = 1;
-  } else if (quality === 3) {
-    newInterval = interval === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
-  } else if (quality === 4) {
-    if (repetitions === 0) newInterval = 1;
-    else if (repetitions === 1) newInterval = 3;
-    else newInterval = Math.max(1, Math.round(interval * newEaseFactor));
-  } else if (quality === 5) {
-    if (repetitions === 0) newInterval = 4;
-    else if (repetitions === 1) newInterval = 7;
-    else newInterval = Math.max(1, Math.round(interval * newEaseFactor * 1.3));
+  const goodEf = Math.max(1.3, Math.min(3.0, easeFactor));
+  let goodInterval;
+  if (repetitions === 0 || interval === 0) {
+    goodInterval = 1;
+  } else if (repetitions === 1) {
+    if (interval <= 1) {
+      goodInterval = 3;
+    } else {
+      goodInterval = Math.max(interval + 1, Math.round(interval * goodEf));
+    }
+  } else {
+    goodInterval = Math.max(interval + 1, Math.round(interval * goodEf));
   }
 
-  return newInterval;
+  if (quality === 4) return goodInterval;
+
+  if (quality === 3) {
+    let hardInterval;
+    if (repetitions === 0 || interval === 0 || interval <= 1) {
+      hardInterval = 1;
+    } else {
+      hardInterval = Math.max(interval, Math.round(interval * 1.2));
+    }
+    if (goodInterval > 1) {
+      hardInterval = Math.min(hardInterval, goodInterval - 1);
+    }
+    return hardInterval;
+  }
+
+  if (quality === 5) {
+    const easyEf = Math.max(1.3, Math.min(3.0, Math.round((easeFactor + 0.1) * 100) / 100));
+    if (repetitions === 0 || interval === 0) {
+      return 4;
+    }
+    if (repetitions === 1 && interval <= 1) {
+      return 7;
+    }
+    return Math.max(goodInterval + 1, Math.round(interval * easyEf * 1.3));
+  }
+
+  return 1;
 }
 
 export function formatInterval(days) {

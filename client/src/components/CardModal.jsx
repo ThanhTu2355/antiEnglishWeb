@@ -323,7 +323,7 @@ export default function CardModal({ isOpen, onClose, folderId, cardToEdit, onSav
                 value={phonetic}
                 onChange={(e) => setPhonetic(e.target.value)}
                 placeholder="/ˌkɒm.prɪˈhend/"
-                className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 bg-input-theme border border-theme rounded-xl text-theme-main font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
           </div>

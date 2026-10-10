@@ -437,7 +437,7 @@ export default function FolderDetailPage() {
                       {card.word}
                     </h3>
                     {card.phonetic && (
-                      <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-semibold block mt-0.5">
+                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium block mt-0.5 tracking-normal">
                         {card.phonetic}
                       </span>
                     )}

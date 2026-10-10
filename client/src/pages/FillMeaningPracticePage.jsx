@@ -579,7 +579,7 @@ export default function FillMeaningPracticePage() {
                   <div className="space-y-0.5 truncate mr-3">
                     <div className="flex items-center space-x-2">
                       <span className="font-extrabold text-theme-main">{item.question.word}</span>
-                      <span className="text-xs text-theme-subtle font-mono">({item.question.phonetic})</span>
+                      <span className="text-xs text-theme-subtle">({item.question.phonetic})</span>
                     </div>
                     <p className="text-xs text-theme-muted">
                       {mode === 'fill_word' ? 'Từ tiếng Anh đúng: ' : 'Nghĩa đúng: '}
@@ -709,7 +709,7 @@ export default function FillMeaningPracticePage() {
                 <TTSButton text={currentQ.word} size={20} className="p-2 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/25 rounded-xl" />
               </div>
               {currentQ.phonetic && (
-                <p className="text-base font-mono text-purple-600 dark:text-purple-400 font-bold">{currentQ.phonetic}</p>
+                <p className="text-base text-purple-600 dark:text-purple-400 font-medium">{currentQ.phonetic}</p>
               )}
             </div>
           ) : (

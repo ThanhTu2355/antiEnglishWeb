@@ -35,30 +35,46 @@ function calculateSM2(card, rating) {
     newInterval = 1;
   } else {
     // Remembered
+    newRepetitions = repetitions + 1;
+
+    // Calculate baseline Good interval first so Hard and Easy can be relative and strictly ordered
+    const goodEf = Math.max(1.3, Math.min(3.0, easeFactor));
+    let goodInterval;
+    if (repetitions === 0 || interval === 0) {
+      goodInterval = 1;
+    } else if (repetitions === 1) {
+      if (interval <= 1) {
+        goodInterval = 3;
+      } else {
+        goodInterval = Math.max(interval + 1, Math.round(interval * goodEf));
+      }
+    } else {
+      goodInterval = Math.max(interval + 1, Math.round(interval * goodEf));
+    }
+
     if (quality === 3) {
       // Hard: interval increases more gently
-      newInterval = interval === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
-      newRepetitions = repetitions + 1;
-    } else if (quality === 4) {
-      // Good: standard SM-2 intervals (1 day -> 3 days -> interval * EF)
-      if (repetitions === 0) {
+      if (repetitions === 0 || interval === 0 || interval <= 1) {
         newInterval = 1;
-      } else if (repetitions === 1) {
-        newInterval = 3;
       } else {
-        newInterval = Math.max(1, Math.round(interval * newEaseFactor));
+        newInterval = Math.max(interval, Math.round(interval * 1.2));
       }
-      newRepetitions = repetitions + 1;
+      // Guarantee Hard is strictly less than Good when Good > 1
+      if (goodInterval > 1) {
+        newInterval = Math.min(newInterval, goodInterval - 1);
+      }
+    } else if (quality === 4) {
+      // Good: standard SM-2 intervals
+      newInterval = goodInterval;
     } else if (quality === 5) {
-      // Easy: accelerated interval (4 days -> 7 days -> interval * EF * 1.3)
-      if (repetitions === 0) {
+      // Easy: accelerated interval, always strictly greater than Good
+      if (repetitions === 0 || interval === 0) {
         newInterval = 4;
-      } else if (repetitions === 1) {
+      } else if (repetitions === 1 && interval <= 1) {
         newInterval = 7;
       } else {
-        newInterval = Math.max(1, Math.round(interval * newEaseFactor * 1.3));
+        newInterval = Math.max(goodInterval + 1, Math.round(interval * newEaseFactor * 1.3));
       }
-      newRepetitions = repetitions + 1;
     }
   }
 
